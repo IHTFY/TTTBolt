@@ -22,7 +22,7 @@
 
 	{#if $gameWon}
 		<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
-			<h2 class="text-9xl font-bold text-white">
+			<h2 class="text-7xl font-bold text-white">
 				{$gameWon.toLocaleUpperCase()} Wins!
 			</h2>
 		</div>
