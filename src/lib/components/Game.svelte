@@ -109,7 +109,7 @@
 	</g>
 
 	<!-- marks -->
-	{#each $board as player, i}
+	{#each $board as player, i (i)}
 		{#if player}
 			<g transform="translate({cells[i].x} {cells[i].y})">
 				<LED {player} status={state(i)} />
@@ -118,7 +118,7 @@
 	{/each}
 
 	<!-- touch targets -->
-	{#each cells as c, i}
+	{#each cells as c, i (i)}
 		<rect
 			class="cell"
 			x={c.x - 50}
