@@ -15,13 +15,10 @@
 	let color = $derived(status === 'dying' ? colors[player].dim : colors[player].lit);
 </script>
 
-<g
-	class="led {status}"
-	stroke={color}
-	fill="none"
-	stroke-width="9"
-	filter={status === 'dying' ? undefined : 'url(#glow)'}
->
+{#if status !== 'dying'}
+	<circle class="spill {status}" r="58" fill="url(#spill-{player})" />
+{/if}
+<g class="led {status}" stroke={color} fill="none" stroke-width="9">
 	{#if player === 'x'}
 		<g stroke-linecap="butt">
 			<path d="M-30 -30 L30 30" />
@@ -44,14 +41,34 @@
 		transform-origin: center;
 		transition: stroke 250ms;
 	}
+	.led:not(.dying) {
+		filter: url(#glow);
+	}
+	:global(.dark) .led:not(.dying) {
+		filter: url(#bloom);
+	}
 	.dying {
 		animation: none;
 	}
-	.lose {
+	.spill {
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 160ms;
+	}
+	:global(.dark) .spill {
+		opacity: 1;
+	}
+	:global(.dark) .spill.lose {
+		opacity: 0.18;
+	}
+	:global(.dark) .spill.win {
+		animation: blink 0.55s steps(1, end) infinite;
+	}
+	.led.lose {
 		opacity: 0.18;
 		transition: opacity 400ms;
 	}
-	.win {
+	.led.win {
 		animation: blink 0.55s steps(1, end) infinite;
 	}
 	@keyframes pop {
