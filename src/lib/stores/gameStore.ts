@@ -86,18 +86,18 @@ export const handleClick = (index: number) => {
 };
 
 // check for winner and update state
-export const gameWon = derived(gameState, ($gameState) => {
-	const winningCombinations = [
-		[0, 1, 2],
-		[3, 4, 5],
-		[6, 7, 8],
-		[0, 3, 6],
-		[1, 4, 7],
-		[2, 5, 8],
-		[0, 4, 8],
-		[2, 4, 6]
-	];
+const winningCombinations = [
+	[0, 1, 2],
+	[3, 4, 5],
+	[6, 7, 8],
+	[0, 3, 6],
+	[1, 4, 7],
+	[2, 5, 8],
+	[0, 4, 8],
+	[2, 4, 6]
+];
 
+export const gameWon = derived(gameState, ($gameState) => {
 	let winner = null;
 	for (const combination of winningCombinations) {
 		const xWin = combination.every((index) => $gameState.x.includes(index));
@@ -112,4 +112,16 @@ export const gameWon = derived(gameState, ($gameState) => {
 		gameState.update((state) => ({ ...state, winner }));
 	}
 	return winner;
+});
+
+// indexes of the winning three-in-a-row, if any
+export const winningLine = derived(gameState, ($gameState) => {
+	for (const combination of winningCombinations) {
+		for (const player of ['x', 'o']) {
+			if (combination.every((index) => $gameState[player].includes(index))) {
+				return combination;
+			}
+		}
+	}
+	return null;
 });
