@@ -1,41 +1,240 @@
-<script>
-	import { board, dying, gameWon, handleClick } from '$lib/stores/gameStore';
-	import Space from './Space.svelte';
+<script lang="ts">
+	import {
+		board,
+		dying,
+		gameWon,
+		handleClick,
+		handleReset,
+		gameState,
+		winningLine
+	} from '$lib/stores/gameStore';
+	import LED from './LED.svelte';
+
+	// cell centres on the 400 x 460 device canvas
+	const cells = Array.from({ length: 9 }, (_, i) => ({
+		x: 100 + (i % 3) * 100,
+		y: 95 + Math.floor(i / 3) * 100
+	}));
+
+	// black glass face: rounded square with gently pinched sides
+	const face =
+		'M83 30 C140 30 160 39 200 39 C240 39 260 30 317 30 A48 48 0 0 1 365 78 ' +
+		'C365 135 356 155 356 195 C356 235 365 255 365 312 A48 48 0 0 1 317 360 ' +
+		'C260 360 240 351 200 351 C160 351 140 360 83 360 A48 48 0 0 1 35 312 ' +
+		'C35 255 44 235 44 195 C44 155 35 135 35 78 A48 48 0 0 1 83 30 Z';
+
+	function tap(i: number) {
+		if ($gameWon) handleReset();
+		else handleClick(i);
+	}
+
+	function state(i: number): 'alive' | 'dying' | 'win' | 'lose' {
+		if ($winningLine) return $winningLine.includes(i) ? 'win' : 'lose';
+		return i === $dying ? 'dying' : 'alive';
+	}
 </script>
 
-<div class="relative mx-auto aspect-square w-[min(100vw,100vh)]">
-	<!-- Board lines -->
-	<svg
-		class="absolute inset-0 z-0 h-full w-full"
-		viewBox="0 0 300 300"
-		preserveAspectRatio="xMidYMid meet"
-		stroke="currentColor"
-		stroke-width="6"
-		stroke-linecap="round"
-		stroke-linejoin="round"
+<svg
+	class="device"
+	viewBox="0 0 400 460"
+	xmlns="http://www.w3.org/2000/svg"
+	role="application"
+	aria-label="Tic-Tac-Toe Bolt board"
+>
+	<defs>
+		<linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#ffe44d" />
+			<stop offset="1" stop-color="#f5c800" />
+		</linearGradient>
+		<linearGradient id="rim" x1="0" y1="0" x2="1" y2="0">
+			<stop offset="0" stop-color="#f0a53a" />
+			<stop offset="0.5" stop-color="#e98a2c" />
+			<stop offset="1" stop-color="#d9731f" />
+		</linearGradient>
+		<radialGradient id="glass" cx="0.35" cy="0.2" r="1">
+			<stop offset="0" stop-color="#26262a" />
+			<stop offset="0.55" stop-color="#101012" />
+			<stop offset="1" stop-color="#050506" />
+		</radialGradient>
+		<linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#fff" stop-opacity="0.09" />
+			<stop offset="0.45" stop-color="#fff" stop-opacity="0.02" />
+			<stop offset="0.46" stop-color="#fff" stop-opacity="0" />
+		</linearGradient>
+		<linearGradient id="line" gradientUnits="userSpaceOnUse" x1="60" y1="55" x2="340" y2="335">
+			<stop offset="0" stop-color="#fafafa" />
+			<stop offset="1" stop-color="#cfcfd2" />
+		</linearGradient>
+		<filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+			<feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0b3a66" flood-opacity="0.45" />
+		</filter>
+		<filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+			<feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b" />
+			<feMerge>
+				<feMergeNode in="b" />
+				<feMergeNode in="SourceGraphic" />
+			</feMerge>
+		</filter>
+		<!-- wider halo, used when the room is dark -->
+		<filter id="bloom" x="-80%" y="-80%" width="260%" height="260%">
+			<feGaussianBlur in="SourceGraphic" stdDeviation="3" result="near" />
+			<feGaussianBlur in="SourceGraphic" stdDeviation="10" result="far" />
+			<feMerge>
+				<feMergeNode in="far" />
+				<feMergeNode in="near" />
+				<feMergeNode in="SourceGraphic" />
+			</feMerge>
+		</filter>
+		<!-- light each mark casts onto the glass around it -->
+		<radialGradient id="spill-x">
+			<stop offset="0" stop-color="#ff5a2c" stop-opacity="0.35" />
+			<stop offset="1" stop-color="#ff5a2c" stop-opacity="0" />
+		</radialGradient>
+		<radialGradient id="spill-o">
+			<stop offset="0" stop-color="#2ea8ff" stop-opacity="0.35" />
+			<stop offset="1" stop-color="#2ea8ff" stop-opacity="0" />
+		</radialGradient>
+		<clipPath id="faceClip"><path d={face} /></clipPath>
+	</defs>
+
+	<!-- shell: orange base rim + yellow top -->
+	<g class="shell" filter="url(#shadow)">
+		<rect x="10" y="22" width="380" height="424" rx="78" fill="url(#rim)" />
+		<rect x="10" y="10" width="380" height="420" rx="78" fill="url(#body)" />
+		<rect
+			x="14"
+			y="13"
+			width="372"
+			height="412"
+			rx="75"
+			fill="none"
+			stroke="#fff6b0"
+			stroke-opacity="0.7"
+			stroke-width="3"
+		/>
+	</g>
+
+	<!-- glass face -->
+	<path d={face} fill="#c9a400" transform="translate(0 2)" />
+	<path d={face} fill="url(#glass)" />
+	<rect x="35" y="30" width="330" height="330" fill="url(#gloss)" clip-path="url(#faceClip)" />
+
+	<!-- grid -->
+	<g stroke="url(#line)" stroke-width="7" stroke-linecap="round">
+		<path d="M150 58 V332" />
+		<path d="M250 58 V332" />
+		<path d="M62 145 H338" />
+		<path d="M62 245 H338" />
+	</g>
+
+	<!-- turn indicator socket -->
+	<circle cx="66" cy="398" r="9" fill="#2a2a2a" />
+
+	<!-- reset button -->
+	<g
+		class="btn"
+		role="button"
+		tabindex="0"
+		aria-label="New game"
+		transform="translate(334 398)"
+		onclick={handleReset}
+		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleReset()}
 	>
-		<path d="M100 10 v280" />
-		<path d="M200 10 v280" />
-		<path d="M10 100 h280" />
-		<path d="M10 200 h280" />
-	</svg>
+		<rect x="-30" y="-24" width="60" height="48" fill="transparent" />
+		<circle r="15" fill="#e3b400" />
+		<circle r="13" fill="#2b2b2b" />
+		<path
+			d="M5 -3.5 A6.5 6.5 0 1 0 6 3"
+			fill="none"
+			stroke="#e8e8e8"
+			stroke-width="2.2"
+			stroke-linecap="round"
+		/>
+		<path d="M6.8 -8 L6.8 -2.2 L1.2 -3.2 Z" fill="#e8e8e8" />
+	</g>
 
-	{#if $gameWon}
-		<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
-			<h2 class="text-7xl font-bold text-white">
-				{$gameWon.toLocaleUpperCase()} Wins!
-			</h2>
-		</div>
-	{/if}
+	<!-- room darkness: everything above this is unlit plastic, everything below emits light -->
+	<rect class="lights-off" x="10" y="10" width="380" height="436" rx="78" />
 
-	<div class="relative z-10 grid h-full w-full grid-cols-3 grid-rows-3">
-		{#each $board as space, i}
-			<button
-				class="flex h-full w-full items-center justify-center"
-				on:click={() => handleClick(i)}
-			>
-				<Space player={space} status={i === $dying ? 'dying' : 'alive'} />
-			</button>
-		{/each}
-	</div>
-</div>
+	<!-- marks -->
+	{#each $board as player, i (i)}
+		{#if player}
+			<g transform="translate({cells[i].x} {cells[i].y})">
+				<LED {player} status={state(i)} />
+			</g>
+		{/if}
+	{/each}
+
+	<!-- turn indicator LED -->
+	<circle
+		class="turn-led"
+		cx="66"
+		cy="398"
+		r="6"
+		fill={$gameState.turn === 'x' ? '#ff5a2c' : '#2aa3ff'}
+		opacity={$gameWon ? 0.25 : 1}
+	/>
+
+	<!-- touch targets -->
+	{#each cells as c, i (i)}
+		<rect
+			class="cell"
+			x={c.x - 50}
+			y={c.y - 50}
+			width="100"
+			height="100"
+			fill="transparent"
+			role="button"
+			tabindex="0"
+			aria-label="Cell {i + 1}: {$board[i] ?? 'empty'}"
+			onclick={() => tap(i)}
+			onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && tap(i)}
+		/>
+	{/each}
+</svg>
+
+<style>
+	.device {
+		display: block;
+		width: 100%;
+		height: 100%;
+		overflow: visible;
+		touch-action: manipulation;
+		user-select: none;
+		-webkit-user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.cell,
+	.btn {
+		cursor: pointer;
+		outline: none;
+	}
+	.cell:focus-visible {
+		stroke: #ffffff55;
+		stroke-width: 3;
+	}
+	.lights-off {
+		fill: #020306;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity var(--lights-speed, 160ms) ease-out;
+	}
+	:global(.dark) .lights-off {
+		opacity: 0.84;
+	}
+	:global(html.flicker) .lights-off {
+		animation: flicker 700ms steps(1, end);
+	}
+	.shell {
+		transition: opacity 160ms;
+	}
+	:global(.dark) .shell {
+		filter: none;
+	}
+	.turn-led {
+		filter: url(#glow);
+	}
+	.btn:active {
+		transform: translate(334px, 399px) scale(0.92);
+	}
+</style>

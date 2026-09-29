@@ -1,48 +1,170 @@
 <script lang="ts">
 	import Game from '$lib/components/Game.svelte';
-	import Moon from 'lucide-svelte/icons/moon';
-	import Sun from 'lucide-svelte/icons/sun';
-
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { handleLoad, handleReset } from '$lib/stores/gameStore';
-	import { resetMode, setMode } from 'mode-watcher';
+	import LightSwitch from '$lib/components/LightSwitch.svelte';
+	import { gameState, gameWon } from '$lib/stores/gameStore';
 </script>
 
-<DropdownMenu.Root>
-	<DropdownMenu.Trigger asChild let:builder>
-		<Button builders={[builder]} variant="outline" size="icon">
-			<Sun
-				class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
-			/>
-			<Moon
-				class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
-			/>
-			<span class="sr-only">Toggle theme</span>
-		</Button>
-	</DropdownMenu.Trigger>
-	<DropdownMenu.Content align="end">
-		<DropdownMenu.Item on:click={() => setMode('light')}>Light</DropdownMenu.Item>
-		<DropdownMenu.Item on:click={() => setMode('dark')}>Dark</DropdownMenu.Item>
-		<DropdownMenu.Item on:click={() => resetMode()}>System</DropdownMenu.Item>
-	</DropdownMenu.Content>
-</DropdownMenu.Root>
+<svelte:head>
+	<title>Tic-Tac-Toe Bolt</title>
+</svelte:head>
 
-<div class="center flex flex-col items-center justify-center">
-	<h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Tic Tac Toe Bolt</h1>
-	<p class="leading-7 [&:not(:first-child)]:my-4">
-		Based on <a
-			class="text-primary font-medium underline underline-offset-4"
-			href="https://www.giiker.com/products/tic-tac-toe-bolt">Tic-Tac-Toe Bolt</a
-		> from GiiKER
-	</p>
-</div>
+<main>
+	<!-- decorative swooshes, as on the box art -->
+	<svg class="swoosh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+		<path d="M-10 78 C 20 60, 45 95, 70 72 S 105 40, 115 55" />
+		<path d="M60 -5 C 75 15, 95 10, 110 25" />
+	</svg>
 
-<div class="justify-center flex flex-col items-center my-4">
-	<div class="flex gap-2 mb-4">
-		<Button on:click={handleReset}>New Game</Button>
-		<!-- <Button on:click={handleLoad}>Load Example</Button> -->
+	<!-- the room itself going dark; the board's LEDs sit above this -->
+	<div class="room" aria-hidden="true"></div>
+
+	<header>
+		<h1>Infinite Tic-Tac-Toe</h1>
+		<p class="status" aria-live="polite">
+			{#if $gameWon}
+				<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins! Tap to play again
+			{:else}
+				<span class={$gameState.turn}>{$gameState.turn.toUpperCase()}</span> to move · only 3 marks each
+			{/if}
+		</p>
+	</header>
+
+	<div class="stage">
+		<div class="device-wrap">
+			<Game />
+		</div>
 	</div>
 
-	<Game />
-</div>
+	<LightSwitch />
+</main>
+
+<style>
+	:global(html),
+	:global(body) {
+		margin: 0;
+		height: 100%;
+		overflow: hidden;
+		overscroll-behavior: none;
+		background: #2e9fe0;
+	}
+	main {
+		position: fixed;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: max(12px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
+		box-sizing: border-box;
+		background: radial-gradient(120% 90% at 50% 40%, #3cb0ee 0%, #2e9fe0 55%, #2386c7 100%);
+		font-family: 'Nunito', system-ui, sans-serif;
+		color: #fff;
+		overflow: hidden;
+		touch-action: manipulation;
+	}
+	.swoosh {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+		fill: none;
+		stroke: #f2cf1d;
+		stroke-width: 9;
+		stroke-linecap: round;
+		vector-effect: non-scaling-stroke;
+	}
+	.swoosh path {
+		vector-effect: non-scaling-stroke;
+		stroke-width: clamp(28px, 7vmin, 70px);
+	}
+	.room {
+		position: absolute;
+		inset: 0;
+		background: #020306;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 160ms ease-out;
+	}
+	:global(.dark) .room {
+		opacity: 0.84;
+	}
+	:global(html.flicker) .room {
+		animation: flicker 700ms steps(1, end);
+	}
+	header,
+	.stage {
+		position: relative;
+	}
+	header {
+		transition: opacity 160ms;
+	}
+	:global(.dark) header {
+		opacity: 0.35;
+	}
+	header {
+		text-align: center;
+		flex: none;
+	}
+	h1 {
+		margin: 0;
+		font-weight: 800;
+		font-size: clamp(1.25rem, 4.5vmin, 2.2rem);
+		letter-spacing: 0.01em;
+		text-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+	}
+	.status {
+		margin: 0.2em 0 0;
+		font-weight: 600;
+		font-size: clamp(0.9rem, 2.8vmin, 1.25rem);
+	}
+	.status span {
+		display: inline-block;
+		min-width: 1.6em;
+		padding: 0 0.35em;
+		border-radius: 0.4em;
+		background: #111;
+		font-weight: 800;
+	}
+	.status .x {
+		color: #ff6a3d;
+	}
+	.status .o {
+		color: #3fb2ff;
+	}
+	.stage {
+		flex: 1;
+		min-height: 0;
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		container-type: size;
+	}
+	.device-wrap {
+		/* keep the 400:460 device fully visible in whatever space is left */
+		width: min(100cqw, 100cqh * 400 / 460, 640px);
+		aspect-ratio: 400 / 460;
+	}
+	/* fluorescent tubes stuttering on; shared with the page background */
+	@keyframes -global-flicker {
+		0% {
+			opacity: 0.84;
+		}
+		8% {
+			opacity: 0.1;
+		}
+		14% {
+			opacity: 0.84;
+		}
+		24% {
+			opacity: 0.05;
+		}
+		30% {
+			opacity: 0.6;
+		}
+		40%,
+		100% {
+			opacity: 0;
+		}
+	}
+</style>
