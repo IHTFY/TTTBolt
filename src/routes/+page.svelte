@@ -5,7 +5,6 @@
 
 <svelte:head>
 	<title>Tic-Tac-Toe Bolt</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link
 		href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap"
 		rel="stylesheet"
@@ -35,10 +34,6 @@
 			<Game />
 		</div>
 	</div>
-
-	<footer>
-		Based on <a href="https://www.giiker.com/products/tic-tac-toe-bolt">Tic-Tac-Toe Bolt</a> by GiiKER
-	</footer>
 </main>
 
 <style>
@@ -81,7 +76,6 @@
 		stroke-width: clamp(28px, 7vmin, 70px);
 	}
 	header,
-	footer,
 	.stage {
 		position: relative;
 	}
@@ -128,14 +122,5 @@
 		/* keep the 400:460 device fully visible in whatever space is left */
 		width: min(100cqw, 100cqh * 400 / 460, 640px);
 		aspect-ratio: 400 / 460;
-	}
-	footer {
-		flex: none;
-		font-size: 0.75rem;
-		opacity: 0.85;
-	}
-	footer a {
-		color: #fff;
-		font-weight: 700;
 	}
 </style>
