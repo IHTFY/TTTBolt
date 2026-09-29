@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect x="16" y="28" width="480" height="468" rx="112" fill="#ec8a2a"/>
+<rect x="16" y="16" width="480" height="464" rx="112" fill="#f7cc0e"/><g transform="translate(76 68)">
+  <rect width="360" height="360" rx="54" fill="#141416"/>
+  <g stroke="#f2f2f2" stroke-width="12" stroke-linecap="round">
+    <path d="M120 30 V330"/><path d="M240 30 V330"/>
+    <path d="M30 120 H330"/><path d="M30 240 H330"/>
+  </g>
+  <g stroke="#ff5a2c" stroke-width="21" stroke-linecap="round"><path d="M150 150 L210 210"/><path d="M210 150 L150 210"/></g>
+  <g fill="none" stroke="#2ea8ff" stroke-width="19"><path d="M324.76 41.34 A31 31 0 0 1 324.76 78.66"/><path d="M318.66 84.76 A31 31 0 0 1 281.34 84.76"/><path d="M275.24 78.66 A31 31 0 0 1 275.24 41.34"/><path d="M281.34 35.24 A31 31 0 0 1 318.66 35.24"/></g>
+  <g stroke="#ff5a2c" stroke-width="21" stroke-linecap="round"><path d="M30 270 L90 330"/><path d="M90 270 L30 330"/></g>
+  <g fill="none" stroke="#2ea8ff" stroke-width="19"><path d="M84.76 41.34 A31 31 0 0 1 84.76 78.66"/><path d="M78.66 84.76 A31 31 0 0 1 41.34 84.76"/><path d="M35.24 78.66 A31 31 0 0 1 35.24 41.34"/><path d="M41.34 35.24 A31 31 0 0 1 78.66 35.24"/></g>
+</g></svg>

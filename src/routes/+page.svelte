@@ -6,10 +6,6 @@
 
 <svelte:head>
 	<title>Tic-Tac-Toe Bolt</title>
-	<link
-		href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap"
-		rel="stylesheet"
-	/>
 </svelte:head>
 
 <main>
