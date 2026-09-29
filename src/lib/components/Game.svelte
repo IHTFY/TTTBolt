@@ -145,9 +145,6 @@
 		/>
 	</g>
 
-	<!-- logo -->
-	<text x="200" y="408" text-anchor="middle" class="logo">GiiKER</text>
-
 	<!-- reset button -->
 	<g
 		class="btn"
@@ -194,12 +191,5 @@
 	}
 	.btn:active {
 		transform: translate(334px, 399px) scale(0.92);
-	}
-	.logo {
-		font-family: 'Nunito', 'Arial Rounded MT Bold', system-ui, sans-serif;
-		font-weight: 800;
-		font-size: 22px;
-		letter-spacing: 1.5px;
-		fill: #3a3a3a;
 	}
 </style>
