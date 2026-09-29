@@ -75,11 +75,30 @@
 				<feMergeNode in="SourceGraphic" />
 			</feMerge>
 		</filter>
+		<!-- wider halo, used when the room is dark -->
+		<filter id="bloom" x="-80%" y="-80%" width="260%" height="260%">
+			<feGaussianBlur in="SourceGraphic" stdDeviation="3" result="near" />
+			<feGaussianBlur in="SourceGraphic" stdDeviation="10" result="far" />
+			<feMerge>
+				<feMergeNode in="far" />
+				<feMergeNode in="near" />
+				<feMergeNode in="SourceGraphic" />
+			</feMerge>
+		</filter>
+		<!-- light each mark casts onto the glass around it -->
+		<radialGradient id="spill-x">
+			<stop offset="0" stop-color="#ff5a2c" stop-opacity="0.35" />
+			<stop offset="1" stop-color="#ff5a2c" stop-opacity="0" />
+		</radialGradient>
+		<radialGradient id="spill-o">
+			<stop offset="0" stop-color="#2ea8ff" stop-opacity="0.35" />
+			<stop offset="1" stop-color="#2ea8ff" stop-opacity="0" />
+		</radialGradient>
 		<clipPath id="faceClip"><path d={face} /></clipPath>
 	</defs>
 
 	<!-- shell: orange base rim + yellow top -->
-	<g filter="url(#shadow)">
+	<g class="shell" filter="url(#shadow)">
 		<rect x="10" y="22" width="380" height="424" rx="78" fill="url(#rim)" />
 		<rect x="10" y="10" width="380" height="420" rx="78" fill="url(#body)" />
 		<rect
@@ -108,42 +127,8 @@
 		<path d="M62 245 H338" />
 	</g>
 
-	<!-- marks -->
-	{#each $board as player, i (i)}
-		{#if player}
-			<g transform="translate({cells[i].x} {cells[i].y})">
-				<LED {player} status={state(i)} />
-			</g>
-		{/if}
-	{/each}
-
-	<!-- touch targets -->
-	{#each cells as c, i (i)}
-		<rect
-			class="cell"
-			x={c.x - 50}
-			y={c.y - 50}
-			width="100"
-			height="100"
-			fill="transparent"
-			role="button"
-			tabindex="0"
-			aria-label="Cell {i + 1}: {$board[i] ?? 'empty'}"
-			onclick={() => tap(i)}
-			onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && tap(i)}
-		/>
-	{/each}
-
-	<!-- turn indicator LED -->
-	<g transform="translate(66 398)">
-		<circle r="9" fill="#2a2a2a" />
-		<circle
-			r="6"
-			fill={$gameState.turn === 'x' ? '#ff5a2c' : '#2aa3ff'}
-			filter="url(#glow)"
-			opacity={$gameWon ? 0.25 : 1}
-		/>
-	</g>
+	<!-- turn indicator socket -->
+	<circle cx="66" cy="398" r="9" fill="#2a2a2a" />
 
 	<!-- reset button -->
 	<g
@@ -167,6 +152,45 @@
 		/>
 		<path d="M6.8 -8 L6.8 -2.2 L1.2 -3.2 Z" fill="#e8e8e8" />
 	</g>
+
+	<!-- room darkness: everything above this is unlit plastic, everything below emits light -->
+	<rect class="lights-off" x="10" y="10" width="380" height="436" rx="78" />
+
+	<!-- marks -->
+	{#each $board as player, i (i)}
+		{#if player}
+			<g transform="translate({cells[i].x} {cells[i].y})">
+				<LED {player} status={state(i)} />
+			</g>
+		{/if}
+	{/each}
+
+	<!-- turn indicator LED -->
+	<circle
+		class="turn-led"
+		cx="66"
+		cy="398"
+		r="6"
+		fill={$gameState.turn === 'x' ? '#ff5a2c' : '#2aa3ff'}
+		opacity={$gameWon ? 0.25 : 1}
+	/>
+
+	<!-- touch targets -->
+	{#each cells as c, i (i)}
+		<rect
+			class="cell"
+			x={c.x - 50}
+			y={c.y - 50}
+			width="100"
+			height="100"
+			fill="transparent"
+			role="button"
+			tabindex="0"
+			aria-label="Cell {i + 1}: {$board[i] ?? 'empty'}"
+			onclick={() => tap(i)}
+			onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && tap(i)}
+		/>
+	{/each}
 </svg>
 
 <style>
@@ -188,6 +212,27 @@
 	.cell:focus-visible {
 		stroke: #ffffff55;
 		stroke-width: 3;
+	}
+	.lights-off {
+		fill: #020306;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity var(--lights-speed, 160ms) ease-out;
+	}
+	:global(.dark) .lights-off {
+		opacity: 0.84;
+	}
+	:global(html.flicker) .lights-off {
+		animation: flicker 700ms steps(1, end);
+	}
+	.shell {
+		transition: opacity 160ms;
+	}
+	:global(.dark) .shell {
+		filter: none;
+	}
+	.turn-led {
+		filter: url(#glow);
 	}
 	.btn:active {
 		transform: translate(334px, 399px) scale(0.92);

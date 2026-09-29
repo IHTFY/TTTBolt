@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Game from '$lib/components/Game.svelte';
+	import LightSwitch from '$lib/components/LightSwitch.svelte';
 	import { gameState, gameWon } from '$lib/stores/gameStore';
 </script>
 
@@ -18,6 +19,9 @@
 		<path d="M60 -5 C 75 15, 95 10, 110 25" />
 	</svg>
 
+	<!-- the room itself going dark; the board's LEDs sit above this -->
+	<div class="room" aria-hidden="true"></div>
+
 	<header>
 		<h1>Infinite Tic-Tac-Toe</h1>
 		<p class="status" aria-live="polite">
@@ -34,6 +38,8 @@
 			<Game />
 		</div>
 	</div>
+
+	<LightSwitch />
 </main>
 
 <style>
@@ -75,9 +81,29 @@
 		vector-effect: non-scaling-stroke;
 		stroke-width: clamp(28px, 7vmin, 70px);
 	}
+	.room {
+		position: absolute;
+		inset: 0;
+		background: #020306;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 160ms ease-out;
+	}
+	:global(.dark) .room {
+		opacity: 0.84;
+	}
+	:global(html.flicker) .room {
+		animation: flicker 700ms steps(1, end);
+	}
 	header,
 	.stage {
 		position: relative;
+	}
+	header {
+		transition: opacity 160ms;
+	}
+	:global(.dark) header {
+		opacity: 0.35;
 	}
 	header {
 		text-align: center;
@@ -122,5 +148,27 @@
 		/* keep the 400:460 device fully visible in whatever space is left */
 		width: min(100cqw, 100cqh * 400 / 460, 640px);
 		aspect-ratio: 400 / 460;
+	}
+	/* fluorescent tubes stuttering on; shared with the page background */
+	@keyframes -global-flicker {
+		0% {
+			opacity: 0.84;
+		}
+		8% {
+			opacity: 0.1;
+		}
+		14% {
+			opacity: 0.84;
+		}
+		24% {
+			opacity: 0.05;
+		}
+		30% {
+			opacity: 0.6;
+		}
+		40%,
+		100% {
+			opacity: 0;
+		}
 	}
 </style>
