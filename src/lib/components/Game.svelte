@@ -222,9 +222,6 @@
 	:global(.dark) .lights-off {
 		opacity: 0.84;
 	}
-	:global(html.flicker) .lights-off {
-		animation: flicker 700ms steps(1, end);
-	}
 	.shell {
 		transition: opacity 160ms;
 	}
