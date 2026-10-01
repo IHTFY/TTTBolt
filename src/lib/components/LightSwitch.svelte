@@ -4,12 +4,6 @@
 	let lightsOn = $derived($mode !== 'dark');
 
 	function flip() {
-		if (!lightsOn) {
-			// lights coming back on: let the room flicker like real tubes
-			const root = document.documentElement;
-			root.classList.add('flicker');
-			setTimeout(() => root.classList.remove('flicker'), 700);
-		}
 		toggleMode();
 	}
 </script>
