@@ -36,6 +36,8 @@
 	</div>
 
 	<LightSwitch />
+
+	<a class="support" href="https://ihtfy.com/support/" target="_blank" rel="noopener">Support ♥</a>
 </main>
 
 <style>
@@ -96,6 +98,27 @@
 		transition: opacity 160ms;
 	}
 	:global(.dark) header {
+		opacity: 0.35;
+	}
+	.support {
+		position: fixed;
+		left: max(16px, env(safe-area-inset-left));
+		bottom: max(16px, env(safe-area-inset-bottom));
+		z-index: 10;
+		padding: 4px 0;
+		font-weight: 700;
+		font-size: clamp(0.8rem, 2.2vmin, 1rem);
+		color: #fff;
+		opacity: 0.75;
+		text-decoration: none;
+		transition: opacity 160ms;
+	}
+	.support:hover,
+	.support:focus-visible {
+		opacity: 1;
+		text-decoration: underline;
+	}
+	:global(.dark) .support {
 		opacity: 0.35;
 	}
 	header {
