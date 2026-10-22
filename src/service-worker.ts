@@ -9,8 +9,14 @@ import { build, files, prerendered, version } from '$service-worker';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 const CACHE = `tttbolt-${version}`;
-// hosting files (CNAME, .nojekyll) may not be served, and one 404 fails the whole install
-const ASSETS = [...build, ...files.filter((f) => !/\/(CNAME|\.nojekyll)$/.test(f)), ...prerendered];
+// hosting files (CNAME, .nojekyll) may not be served, and one 404 fails the whole install.
+// The .woff font fallbacks are skipped: every browser with service workers loads the .woff2
+// files, and a .woff request still falls through to the network below.
+const ASSETS = [
+	...build.filter((f) => !f.endsWith('.woff')),
+	...files.filter((f) => !/\/(CNAME|\.nojekyll)$/.test(f)),
+	...prerendered
+];
 
 sw.addEventListener('install', (event) => {
 	event.waitUntil(
