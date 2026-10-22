@@ -31,7 +31,7 @@
 
 <style>
 	.switch {
-		position: fixed;
+		position: absolute;
 		right: max(14px, env(safe-area-inset-right));
 		bottom: max(14px, env(safe-area-inset-bottom));
 		z-index: 10;
