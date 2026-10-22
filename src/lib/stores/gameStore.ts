@@ -4,9 +4,9 @@ import { derived, get, writable } from 'svelte/store';
  * Create a writable store that automatically
  * syncs to localStorage under the given key.
  * @param {string} key The localStorage key
- * @param {any} initialValue The initial value
+ * @param {T} initialValue The initial value
  */
-function createPersistedStore(key: string, initialValue: any) {
+function createPersistedStore<T>(key: string, initialValue: T) {
 	// Create a regular writable store
 	const store = writable(initialValue);
 
@@ -27,14 +27,22 @@ function createPersistedStore(key: string, initialValue: any) {
 	return store;
 }
 
-const startState = {
+type Player = 'x' | 'o';
+type GameState = {
+	x: (number | null)[];
+	o: (number | null)[];
+	turn: Player;
+	winner: Player | null;
+};
+
+const startState: GameState = {
 	x: [null, null, null],
 	o: [null, null, null],
 	turn: 'x',
 	winner: null
 };
 
-let exampleState = {
+const exampleState: GameState = {
 	x: [2, 5, 6],
 	o: [1, 3, 7],
 	turn: 'x',
@@ -77,7 +85,7 @@ export const handleClick = (index: number) => {
 		return;
 	}
 	const currentTurn = currentState.turn;
-	const newState = {
+	const newState: GameState = {
 		...currentState,
 		[currentTurn]: [...currentState[currentTurn], index].slice(-3),
 		turn: currentTurn === 'x' ? 'o' : 'x'
@@ -98,7 +106,7 @@ const winningCombinations = [
 ];
 
 export const gameWon = derived(gameState, ($gameState) => {
-	let winner = null;
+	let winner: Player | null = null;
 	for (const combination of winningCombinations) {
 		const xWin = combination.every((index) => $gameState.x.includes(index));
 		const oWin = combination.every((index) => $gameState.o.includes(index));
@@ -117,7 +125,7 @@ export const gameWon = derived(gameState, ($gameState) => {
 // indexes of the winning three-in-a-row, if any
 export const winningLine = derived(gameState, ($gameState) => {
 	for (const combination of winningCombinations) {
-		for (const player of ['x', 'o']) {
+		for (const player of ['x', 'o'] as const) {
 			if (combination.every((index) => $gameState[player].includes(index))) {
 				return combination;
 			}
