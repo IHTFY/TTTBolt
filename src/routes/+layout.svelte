@@ -4,7 +4,10 @@
 	import '@fontsource/nunito/latin-600.css';
 	import '@fontsource/nunito/latin-800.css';
 	import '../app.css';
+	import { loadForBuyer } from '$lib/ads';
 	let { children } = $props();
+
+	onMount(loadForBuyer);
 
 	// Keep the offline copy fresh: look for a new deploy whenever the app comes
 	// back into view, and reload once a new version has taken over.
