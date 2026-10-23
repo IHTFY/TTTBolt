@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { playAdIsStale } from '$lib/ads';
 	import AdSlot from '$lib/components/AdSlot.svelte';
 	import Game from '$lib/components/Game.svelte';
 	import LightSwitch from '$lib/components/LightSwitch.svelte';
-	import { gameState, gameWon } from '$lib/stores/gameStore';
+	import PlayAd from '$lib/components/PlayAd.svelte';
+	import { board, gameState, gameWon } from '$lib/stores/gameStore';
 
 	// One ad per win during this visit. Opening the page on a saved win shows no ad: `won` starts
 	// undefined, so that first value isn't counted.
@@ -13,6 +15,16 @@
 		won = $gameWon;
 	});
 	const adKey = $derived($gameWon && wins > 0 ? `win-${wins}` : '');
+
+	// A new game, when the board empties, gets a new ad beside it, unless the last one is under a
+	// minute old: games can be that quick.
+	let playAd = $state(0);
+	let empty: boolean | undefined;
+	$effect(() => {
+		const now = $board.every((cell) => cell === null);
+		if (now && empty === false && playAdIsStale()) playAd++;
+		empty = now;
+	});
 </script>
 
 <svelte:head>
@@ -29,21 +41,28 @@
 	<!-- the room itself going dark; the board's LEDs sit above this -->
 	<div class="room" aria-hidden="true"></div>
 
-	<header>
-		<h1>Infinite Tic-Tac-Toe</h1>
-		<p class="status" aria-live="polite">
-			{#if $gameWon}
-				<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins! Tap to play again
-			{:else}
-				<span class={$gameState.turn}>{$gameState.turn.toUpperCase()}</span> to move · only 3 marks each
-			{/if}
-		</p>
-	</header>
+	<div class="frame">
+		<div class="play">
+			<header>
+				<h1>Infinite Tic-Tac-Toe</h1>
+				<p class="status" aria-live="polite">
+					{#if $gameWon}
+						<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins! Tap to play again
+					{:else}
+						<span class={$gameState.turn}>{$gameState.turn.toUpperCase()}</span> to move · only 3 marks
+						each
+					{/if}
+				</p>
+			</header>
 
-	<div class="stage">
-		<div class="device-wrap">
-			<Game />
+			<div class="stage">
+				<div class="device-wrap">
+					<Game />
+				</div>
+			</div>
 		</div>
+
+		<PlayAd game={playAd} />
 	</div>
 
 	<LightSwitch />
@@ -110,6 +129,21 @@
 	}
 	:global(.dark) .room {
 		opacity: 0.84;
+	}
+	/* The board's column, with the ad beside it on wide windows; the two stay centered together. */
+	.frame {
+		flex: 1;
+		min-height: 0;
+		width: 100%;
+		display: grid;
+		grid-template-columns: minmax(0, 640px) auto;
+		justify-content: center;
+	}
+	.play {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		min-height: 0;
 	}
 	header,
 	.stage {
