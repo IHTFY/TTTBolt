@@ -11,6 +11,22 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="apple-mobile-web-app-title" content="TTT Bolt" />
+		<script>
+			// A browser that may hold an ad-free token (mayBeAdFree in src/lib/ads.ts) lays the
+			// page out without the ad beside the board from the first paint.
+			try {
+				if (localStorage.getItem('ihtfy-ad-free'))
+					document.documentElement.classList.add('ad-free');
+			} catch {
+				// Storage off: the cookie may still hold the token.
+			}
+			try {
+				if (/(?:^|;\s*)ihtfy-ad-free=/.test(document.cookie))
+					document.documentElement.classList.add('ad-free');
+			} catch {
+				// Cookies off too: the page lays out with the ad's space, as for anyone else.
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
