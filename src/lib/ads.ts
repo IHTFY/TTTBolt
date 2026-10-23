@@ -10,9 +10,8 @@ const LOADER = import.meta.env.VITE_ADS_LOADER || 'https://ihtfy.com/ads/v1.js';
 // The shared 300×250 display unit.
 export const AD_SLOT = '6470163205';
 
-// The unit beside the board during play. It shares the winning-screen unit
-// until a unit of its own exists in AdSense.
-export const PLAY_AD_SLOT = AD_SLOT;
+// The games-play unit: 300×600 in AdSense; the 160×600 box uses it too.
+export const PLAY_AD_SLOT = '7239875855';
 
 let loader: Promise<void> | null = null;
 
