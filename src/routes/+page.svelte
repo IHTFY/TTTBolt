@@ -1,20 +1,31 @@
 <script lang="ts">
-	import { playAdIsStale } from '$lib/ads';
+	import { adForScreen, type AdSize } from '$lib/adScreens';
+	import { mayBeAdFree, playAdIsStale } from '$lib/ads';
 	import AdSlot from '$lib/components/AdSlot.svelte';
 	import Game from '$lib/components/Game.svelte';
 	import LightSwitch from '$lib/components/LightSwitch.svelte';
 	import PlayAd from '$lib/components/PlayAd.svelte';
-	import { board, gameState, gameWon } from '$lib/stores/gameStore';
+	import { board, gameState, gameWon, handleReset } from '$lib/stores/gameStore';
 
 	// One ad per win during this visit. Opening the page on a saved win shows no ad: `won` starts
-	// undefined, so that first value isn't counted.
+	// undefined, so that first value isn't counted. The box's size is chosen once, as the win
+	// appears, so a browser bar sliding away doesn't swap the box for a new one. A window too small
+	// for the results layout with a box, or a buyer of ad-free, gets no box and the plain screen.
 	let wins = $state(0);
+	let adSize = $state<AdSize | null>(null);
 	let won: typeof $gameWon | undefined;
 	$effect(() => {
-		if ($gameWon && won === null) wins++;
+		if ($gameWon && won === null) {
+			wins++;
+			adSize = adForScreen('results', {
+				buyer: mayBeAdFree(),
+				width: innerWidth,
+				height: innerHeight
+			});
+		}
 		won = $gameWon;
 	});
-	const adKey = $derived($gameWon && wins > 0 ? `win-${wins}` : '');
+	const adKey = $derived($gameWon && wins > 0 && adSize ? `win-${wins}` : '');
 
 	// A new game, when the board empties, gets a new ad beside it, unless the last one is under a
 	// minute old: games can be that quick.
@@ -47,7 +58,9 @@
 				<h1>Infinite Tic-Tac-Toe</h1>
 				<p class="status" aria-live="polite">
 					{#if $gameWon}
-						<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins! Tap to play again
+						<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins!{adKey
+							? ''
+							: ' Tap to play again'}
 					{:else}
 						<span class={$gameState.turn}>{$gameState.turn.toUpperCase()}</span> to move · only 3 marks
 						each
@@ -65,14 +78,26 @@
 		<PlayAd game={playAd} />
 	</div>
 
-	<LightSwitch />
+	{#snippet links()}
+		<nav class="links">
+			<a href="https://ihtfy.com/support/" target="_blank" rel="noopener">Support ♥</a>
+			<a href="https://ihtfy.com/privacy/" target="_blank" rel="noopener">Privacy</a>
+		</nav>
+	{/snippet}
 
-	<nav class="links">
-		<a href="https://ihtfy.com/support/" target="_blank" rel="noopener">Support ♥</a>
-		<a href="https://ihtfy.com/privacy" target="_blank" rel="noopener">Privacy</a>
-	</nav>
-
-	{#if adKey}<AdSlot {adKey} />{/if}
+	{#if adKey && adSize}
+		<!-- Everything to press comes before the ad, so no control sits beside it or past it. -->
+		<div class="results">
+			<div class="controls">
+				<button class="again" onclick={handleReset}>Play again</button>
+				<LightSwitch inline />
+			</div>
+			<AdSlot {adKey} size={adSize} {links} />
+		</div>
+	{:else}
+		<LightSwitch />
+		<div class="pinned">{@render links()}</div>
+	{/if}
 </main>
 
 <style>
@@ -98,7 +123,8 @@
 		overflow: hidden;
 		touch-action: manipulation;
 	}
-	/* After a win the ad sits just below the screen. The scrollbar stays hidden so it can't narrow the page. */
+	/* The results screen fits the window it was made for. If the window shrinks after (a phone turned
+	   on its side), it scrolls rather than clips the ad. The scrollbar stays hidden so it can't narrow the page. */
 	main.scrolls {
 		overflow-y: auto;
 		scrollbar-width: none;
@@ -155,11 +181,13 @@
 	:global(.dark) header {
 		opacity: 0.35;
 	}
-	.links {
+	.pinned {
 		position: absolute;
 		left: max(16px, env(safe-area-inset-left));
 		bottom: max(16px, env(safe-area-inset-bottom));
 		z-index: 10;
+	}
+	.links {
 		display: flex;
 		gap: 12px;
 		font-weight: 700;
@@ -169,6 +197,7 @@
 	}
 	.links a {
 		padding: 4px 0;
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 		color: #fff;
 		text-decoration: none;
 	}
@@ -186,6 +215,47 @@
 	header {
 		text-align: center;
 		flex: none;
+	}
+	/* The results screen: the board shrinks to what the buttons, links and box leave. It sits above
+	   the swooshes and the dark room, so nothing draws over the ad. */
+	.results {
+		position: relative;
+		z-index: 2;
+		flex: none;
+		width: 100%;
+		display: grid;
+		justify-items: center;
+	}
+	.controls {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: center;
+		gap: 16px;
+		width: min(100%, 340px);
+		margin-bottom: 8px;
+	}
+	/* Left-aligned at the width of the controls, so the loader's "Remove ads" link joining the row moves nothing. */
+	.results .links {
+		width: min(100%, 340px);
+	}
+	.again {
+		height: 44px;
+		border: 0;
+		border-radius: 22px;
+		background: #111;
+		color: #fff;
+		font: inherit;
+		font-weight: 800;
+		font-size: 1rem;
+		cursor: pointer;
+		box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+	}
+	.again:active {
+		transform: translateY(1px);
+	}
+	.again:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 3px;
 	}
 	h1 {
 		margin: 0;

@@ -35,7 +35,7 @@
 			{/key}
 		{/if}
 	</div>
-	<a href="https://ihtfy.com/privacy" target="_blank" rel="noopener">Privacy</a>
+	<a href="https://ihtfy.com/privacy/" target="_blank" rel="noopener">Privacy</a>
 </aside>
 
 <style>
