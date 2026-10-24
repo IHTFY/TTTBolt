@@ -42,7 +42,7 @@
 	<title>Tic-Tac-Toe Bolt</title>
 </svelte:head>
 
-<main>
+<main class:scrolls={adKey}>
 	<!-- decorative swooshes, as on the box art -->
 	<svg class="swoosh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
 		<path d="M-10 78 C 20 60, 45 95, 70 72 S 105 40, 115 55" />
@@ -122,6 +122,12 @@
 		color: #fff;
 		overflow: hidden;
 		touch-action: manipulation;
+	}
+	/* The results screen fits the window it was made for. If the window shrinks after (a phone turned
+	   on its side), it scrolls rather than clips the ad. The scrollbar stays hidden so it can't narrow the page. */
+	main.scrolls {
+		overflow-y: auto;
+		scrollbar-width: none;
 	}
 	.swoosh {
 		position: absolute;
