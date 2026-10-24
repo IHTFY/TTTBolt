@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { mode, toggleMode } from 'mode-watcher';
 
+	// `inline` puts the switch in the page's flow instead of the bottom-right corner.
+	let { inline = false }: { inline?: boolean } = $props();
 	let lightsOn = $derived($mode !== 'dark');
 
 	function flip() {
@@ -11,6 +13,7 @@
 <button
 	class="switch"
 	class:off={!lightsOn}
+	class:inline
 	onclick={flip}
 	aria-label={lightsOn ? 'Turn the lights off' : 'Turn the lights on'}
 	aria-pressed={!lightsOn}
@@ -42,6 +45,9 @@
 		cursor: pointer;
 		touch-action: manipulation;
 		-webkit-tap-highlight-color: transparent;
+	}
+	.switch.inline {
+		position: static;
 	}
 	.switch:focus-visible {
 		outline: 2px solid #fff;
