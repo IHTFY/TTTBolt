@@ -3,24 +3,43 @@ import { derived, get, writable } from 'svelte/store';
 /**
  * Create a writable store that automatically
  * syncs to localStorage under the given key.
+ * Storage can be blocked, full, or hold a damaged value; the game must
+ * still start, so every storage call is guarded and a saved value is used
+ * only if it passes `isValid`.
  * @param {string} key The localStorage key
  * @param {T} initialValue The initial value
+ * @param {(value: unknown) => value is T} isValid Accepts a saved value
  */
-function createPersistedStore<T>(key: string, initialValue: T) {
+function createPersistedStore<T>(
+	key: string,
+	initialValue: T,
+	isValid: (value: unknown) => value is T
+) {
 	// Create a regular writable store
 	const store = writable(initialValue);
 
 	// If we're in the browser, sync with localStorage
 	if (typeof window !== 'undefined') {
 		// 1) On load, pull existing data from localStorage
-		const json = localStorage.getItem(key);
-		if (json) {
-			store.set(JSON.parse(json));
+		try {
+			const json = localStorage.getItem(key);
+			if (json) {
+				const saved: unknown = JSON.parse(json);
+				if (isValid(saved)) {
+					store.set(saved);
+				}
+			}
+		} catch {
+			// Blocked storage or a damaged value: start fresh.
 		}
 
 		// 2) Anytime the store changes, save it to localStorage
 		store.subscribe((value) => {
-			localStorage.setItem(key, JSON.stringify(value));
+			try {
+				localStorage.setItem(key, JSON.stringify(value));
+			} catch {
+				// Blocked or full storage: play on without saving.
+			}
 		});
 	}
 
@@ -34,6 +53,23 @@ type GameState = {
 	turn: Player;
 	winner: Player | null;
 };
+
+const isCell = (cell: unknown) =>
+	cell === null || (Number.isInteger(cell) && (cell as number) >= 0 && (cell as number) <= 8);
+
+const isCells = (cells: unknown) =>
+	Array.isArray(cells) && cells.length === 3 && cells.every(isCell);
+
+function isGameState(value: unknown): value is GameState {
+	if (typeof value !== 'object' || value === null) return false;
+	const { x, o, turn, winner } = value as Record<string, unknown>;
+	return (
+		isCells(x) &&
+		isCells(o) &&
+		(turn === 'x' || turn === 'o') &&
+		(winner === null || winner === 'x' || winner === 'o')
+	);
+}
 
 const startState: GameState = {
 	x: [null, null, null],
@@ -50,7 +86,7 @@ const exampleState: GameState = {
 };
 
 // TODO remove example
-export const gameState = createPersistedStore('gameState', startState);
+export const gameState = createPersistedStore('gameState', startState, isGameState);
 
 // derived board from state
 export const board = derived(gameState, ($gameState) => {
