@@ -167,3 +167,67 @@ describe('game store with impossible saved positions', () => {
 		}
 	}, 20_000);
 });
+
+describe('game store with a second tab open', () => {
+	// The browser fires the event after the other tab has saved, so storage
+	// already holds that value (or a newer one) when the listener runs.
+	const saveInOtherTab = (storage: ReturnType<typeof memoryStorage>, value: string | null) => {
+		if (value === null) storage.data.delete('gameState');
+		else storage.data.set('gameState', value);
+		return window.dispatchEvent(new StorageEvent('storage', { key: 'gameState', newValue: value }));
+	};
+	const afterMove = { x: [null, null, 4], o: [null, null, null], turn: 'o', winner: null };
+
+	it('shows a move made in another tab without writing it back', async () => {
+		const storage = memoryStorage({});
+		const setItem = vi.spyOn(storage, 'setItem');
+		const m = await loadStore(storage);
+		saveInOtherTab(storage, JSON.stringify(afterMove));
+		expect(get(m.gameState)).toEqual(afterMove);
+		expect(setItem).not.toHaveBeenCalled();
+	});
+
+	it("builds the next move on the other tab's game, not on its own stale one", async () => {
+		const storage = memoryStorage({});
+		const m = await loadStore(storage);
+		saveInOtherTab(storage, JSON.stringify(afterMove));
+		m.handleClick(0);
+		expect(JSON.parse(storage.data.get('gameState')!)).toMatchObject({
+			x: [null, null, 4],
+			o: [null, null, 0],
+			turn: 'x'
+		});
+	});
+
+	it('takes the newest save when events arrive late, not the value the event carries', async () => {
+		const storage = memoryStorage({});
+		const m = await loadStore(storage);
+		const older = { x: [null, null, 1], o: [null, null, null], turn: 'o', winner: null };
+		const newer = { x: [null, null, 5], o: [null, null, null], turn: 'o', winner: null };
+		// Storage already holds the newer board when the older event is handled.
+		storage.data.set('gameState', JSON.stringify(newer));
+		window.dispatchEvent(
+			new StorageEvent('storage', { key: 'gameState', newValue: JSON.stringify(older) })
+		);
+		expect(get(m.gameState)).toEqual(newer);
+		m.handleClick(0);
+		expect(JSON.parse(storage.data.get('gameState')!)).toMatchObject({
+			x: [null, null, 5],
+			o: [null, null, 0]
+		});
+	});
+
+	it('ignores other keys, a cleared key, and values that are not a reachable game', async () => {
+		const storage = memoryStorage({});
+		const m = await loadStore(storage);
+		m.handleClick(4);
+		const mine = structuredClone(get(m.gameState));
+		window.dispatchEvent(
+			new StorageEvent('storage', { key: 'other', newValue: JSON.stringify(afterMove) })
+		);
+		saveInOtherTab(storage, null);
+		saveInOtherTab(storage, '{"x":[0,0,0]');
+		saveInOtherTab(storage, '{"x":[0,0,0],"o":[0,0,0],"turn":"x","winner":null}');
+		expect(get(m.gameState)).toEqual(mine);
+	});
+});

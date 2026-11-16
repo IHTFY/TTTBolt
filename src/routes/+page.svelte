@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { adForScreen, type AdSize } from '$lib/adScreens';
+	import { adFits, adForScreen, type AdSize } from '$lib/adScreens';
 	import { mayBeAdFree, playAdIsStale } from '$lib/ads';
 	import AdSlot from '$lib/components/AdSlot.svelte';
 	import Game from '$lib/components/Game.svelte';
@@ -27,6 +27,13 @@
 	});
 	const adKey = $derived($gameWon && wins > 0 && adSize ? `win-${wins}` : '');
 
+	// The ad on screen stays as it is, and a new one is never asked for because the window changed. If
+	// the window turns too small for that box (a phone on its side), the box is hidden, label and all,
+	// so it neither breaks the layout nor covers the board; it comes back if the window grows again.
+	let innerWidth = $state(0);
+	let innerHeight = $state(0);
+	const adFitsNow = $derived(adSize ? adFits(adSize, innerWidth, innerHeight) : false);
+
 	// A new game, when the board empties, gets a new ad beside it, unless the last one is under a
 	// minute old: games can be that quick.
 	let playAd = $state(0);
@@ -37,6 +44,8 @@
 		empty = now;
 	});
 </script>
+
+<svelte:window bind:innerWidth bind:innerHeight />
 
 <svelte:head>
 	<title>Tic-Tac-Toe Bolt</title>
@@ -60,7 +69,7 @@
 					{#if $gameWon}
 						<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins!{adKey
 							? ''
-							: ' Tap to play again'}
+							: ' Press the reset button to play again'}
 					{:else}
 						<span class={$gameState.turn}>{$gameState.turn.toUpperCase()}</span> to move · only 3 marks
 						each
@@ -92,7 +101,7 @@
 				<button class="again" onclick={handleReset}>Play again</button>
 				<LightSwitch inline />
 			</div>
-			<AdSlot {adKey} size={adSize} {links} />
+			<AdSlot {adKey} size={adSize} {links} hidden={!adFitsNow} />
 		</div>
 	{:else}
 		<LightSwitch />

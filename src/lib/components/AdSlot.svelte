@@ -3,7 +3,12 @@
 	import { AD_SLOT, showAd } from '$lib/ads';
 	import type { AdSize } from '$lib/adScreens';
 
-	let { adKey, size, links }: { adKey: string; size: AdSize; links: Snippet } = $props();
+	let {
+		adKey,
+		size,
+		links,
+		hidden = false
+	}: { adKey: string; size: AdSize; links: Snippet; hidden?: boolean } = $props();
 	const [width, height] = size.split('x');
 
 	function ad(box: HTMLElement) {
@@ -13,10 +18,12 @@
 
 <!-- The links come first and the box last, 50px or more below them, so no control sits next to the ad
      or on its far side; the shared loader adds "Remove ads" beside the Privacy link in here. The box
-     keeps its size whether or not an ad fills it. -->
+     keeps its size whether or not an ad fills it. `hidden` takes the label and box out of view without
+     removing them, so the ad already loaded stays, and none is asked for again when the window grows
+     back. -->
 <aside>
 	{@render links()}
-	<div class="ad">
+	<div class="ad" style:display={hidden ? 'none' : null}>
 		<p>Advertisements</p>
 		<div
 			class="box"

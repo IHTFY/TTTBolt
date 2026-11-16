@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adForScreen, resultsAdSize } from '../src/lib/adScreens';
+import { adFits, adForScreen, resultsAdSize } from '../src/lib/adScreens';
 
 const phones = [
 	{ width: 360, height: 640 },
@@ -41,6 +41,33 @@ describe('adForScreen', () => {
 		for (const size of [...phones, { width: 1280, height: 800 }]) {
 			expect(adForScreen('results', { buyer: true, ...size })).toBeNull();
 			expect(adForScreen('play', { buyer: true, ...size })).toBeNull();
+		}
+	});
+});
+
+describe('adFits', () => {
+	it('keeps a box in view while its window still holds the whole results layout', () => {
+		expect(adFits('300x250', 412, 915)).toBe(true);
+		expect(adFits('320x100', 360, 640)).toBe(true);
+		expect(adFits('320x50', 360, 480)).toBe(true);
+	});
+
+	it('drops a box once the window turns too short or too narrow for it', () => {
+		expect(adFits('300x250', 915, 412)).toBe(false);
+		expect(adFits('320x100', 915, 412)).toBe(false);
+		expect(adFits('320x50', 915, 412)).toBe(false);
+		expect(adFits('300x250', 331, 915)).toBe(false);
+	});
+
+	it('agrees with the size chosen for the window', () => {
+		for (const [width, height] of [
+			[360, 640],
+			[390, 750],
+			[1280, 800],
+			[360, 500]
+		]) {
+			const size = resultsAdSize(width, height)!;
+			expect(adFits(size, width, height)).toBe(true);
 		}
 	});
 });

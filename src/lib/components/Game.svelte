@@ -23,11 +23,6 @@
 		'C260 360 240 351 200 351 C160 351 140 360 83 360 A48 48 0 0 1 35 312 ' +
 		'C35 255 44 235 44 195 C44 155 35 135 35 78 A48 48 0 0 1 83 30 Z';
 
-	function tap(i: number) {
-		if ($gameWon) handleReset();
-		else handleClick(i);
-	}
-
 	function state(i: number): 'alive' | 'dying' | 'win' | 'lose' {
 		if ($winningLine) return $winningLine.includes(i) ? 'win' : 'lose';
 		return i === $dying ? 'dying' : 'alive';
@@ -187,8 +182,8 @@
 			role="button"
 			tabindex="0"
 			aria-label="Cell {i + 1}: {$board[i] ?? 'empty'}"
-			onclick={() => tap(i)}
-			onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && tap(i)}
+			onclick={() => handleClick(i)}
+			onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleClick(i)}
 		/>
 	{/each}
 </svg>
