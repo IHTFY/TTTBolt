@@ -35,17 +35,36 @@ function createPersistedStore<T>(
 
 		// 2) Anytime the store changes, save it to localStorage. The first
 		// call only repeats the loaded or initial value; skip it so a failed
-		// read never overwrites the saved game.
+		// read never overwrites the saved game. A value that just arrived from
+		// another tab is already saved, so it is not written back.
 		let first = true;
+		let fromOtherTab = false;
 		store.subscribe((value) => {
 			if (first) {
 				first = false;
 				return;
 			}
+			if (fromOtherTab) return;
 			try {
 				localStorage.setItem(key, JSON.stringify(value));
 			} catch {
 				// Blocked or full storage: play on without saving.
+			}
+		});
+
+		// 3) Another tab saved a move: take it, so this tab never plays on, or
+		// overwrites the save with, a game that is out of date.
+		window.addEventListener('storage', (event) => {
+			if (event.key !== key || event.newValue === null) return;
+			try {
+				const saved: unknown = JSON.parse(event.newValue);
+				if (!isValid(saved)) return;
+				fromOtherTab = true;
+				store.set(saved);
+			} catch {
+				// A damaged value: keep the game on screen.
+			} finally {
+				fromOtherTab = false;
 			}
 		});
 	}

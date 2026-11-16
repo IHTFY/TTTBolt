@@ -17,12 +17,18 @@ const SIZES: { size: AdSize; width: number; height: number }[] = [
 	{ size: '320x50', width: 320, height: 50 }
 ];
 
+const fitsWindow = (s: (typeof SIZES)[number], width: number, height: number) =>
+	width >= s.width + SIDE_PADDING && height >= FIXED_HEIGHT + MIN_BOARD_HEIGHT + s.height;
+
 /** The largest box that fits a window with the whole results layout in view, or null if none does. */
 export function resultsAdSize(width: number, height: number): AdSize | null {
-	const fit = SIZES.find(
-		(s) => width >= s.width + SIDE_PADDING && height >= FIXED_HEIGHT + MIN_BOARD_HEIGHT + s.height
-	);
-	return fit?.size ?? null;
+	return SIZES.find((s) => fitsWindow(s, width, height))?.size ?? null;
+}
+
+/** Whether a box already chosen still fits the window, say after the phone turned on its side. */
+export function adFits(size: AdSize, width: number, height: number): boolean {
+	const box = SIZES.find((s) => s.size === size);
+	return box !== undefined && fitsWindow(box, width, height);
 }
 
 /** The box a screen gets in a window of this size: none on the play screen, none for a buyer of ad-free. */
