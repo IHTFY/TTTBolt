@@ -53,11 +53,15 @@ function createPersistedStore<T>(
 		});
 
 		// 3) Another tab saved a move: take it, so this tab never plays on, or
-		// overwrites the save with, a game that is out of date.
+		// overwrites the save with, a game that is out of date. Events can
+		// arrive after a newer save, so read what storage holds now instead of
+		// the value the event carries.
 		window.addEventListener('storage', (event) => {
-			if (event.key !== key || event.newValue === null) return;
+			if (event.key !== key) return;
 			try {
-				const saved: unknown = JSON.parse(event.newValue);
+				const json = localStorage.getItem(key);
+				if (json === null) return;
+				const saved: unknown = JSON.parse(json);
 				if (!isValid(saved)) return;
 				fromOtherTab = true;
 				store.set(saved);
