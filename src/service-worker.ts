@@ -22,7 +22,7 @@ sw.addEventListener('install', (event) => {
 	event.waitUntil(
 		caches
 			.open(CACHE)
-			.then((cache) => cache.addAll(ASSETS))
+			.then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' }))))
 			.then(() => sw.skipWaiting())
 	);
 });
