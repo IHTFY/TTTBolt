@@ -33,8 +33,15 @@ function createPersistedStore<T>(
 			// Blocked storage or a damaged value: start fresh.
 		}
 
-		// 2) Anytime the store changes, save it to localStorage
+		// 2) Anytime the store changes, save it to localStorage. The first
+		// call only repeats the loaded or initial value; skip it so a failed
+		// read never overwrites the saved game.
+		let first = true;
 		store.subscribe((value) => {
+			if (first) {
+				first = false;
+				return;
+			}
 			try {
 				localStorage.setItem(key, JSON.stringify(value));
 			} catch {
@@ -54,21 +61,55 @@ type GameState = {
 	winner: Player | null;
 };
 
+const winningCombinations = [
+	[0, 1, 2],
+	[3, 4, 5],
+	[6, 7, 8],
+	[0, 3, 6],
+	[1, 4, 7],
+	[2, 5, 8],
+	[0, 4, 8],
+	[2, 4, 6]
+];
+
 const isCell = (cell: unknown) =>
 	cell === null || (Number.isInteger(cell) && (cell as number) >= 0 && (cell as number) <= 8);
 
-const isCells = (cells: unknown) =>
-	Array.isArray(cells) && cells.length === 3 && cells.every(isCell);
+// Moves are appended and the oldest dropped, so empty slots come first.
+const isCells = (cells: unknown): cells is (number | null)[] =>
+	Array.isArray(cells) &&
+	cells.length === 3 &&
+	cells.every(isCell) &&
+	cells.every((cell, i) => cell !== null || i === 0 || cells[i - 1] === null);
 
+const marks = (cells: (number | null)[]) => cells.filter((cell) => cell !== null);
+
+const hasLine = (cells: (number | null)[]) =>
+	winningCombinations.some((combination) => combination.every((index) => cells.includes(index)));
+
+// Accepts only positions a game can reach: X moves first, no cell is used
+// twice, and play stops at the first three in a row.
 function isGameState(value: unknown): value is GameState {
 	if (typeof value !== 'object' || value === null) return false;
 	const { x, o, turn, winner } = value as Record<string, unknown>;
-	return (
-		isCells(x) &&
-		isCells(o) &&
-		(turn === 'x' || turn === 'o') &&
-		(winner === null || winner === 'x' || winner === 'o')
-	);
+	if (
+		!isCells(x) ||
+		!isCells(o) ||
+		(turn !== 'x' && turn !== 'o') ||
+		(winner !== null && winner !== 'x' && winner !== 'o')
+	) {
+		return false;
+	}
+	const xMarks = marks(x);
+	const oMarks = marks(o);
+	if (new Set([...xMarks, ...oMarks]).size !== xMarks.length + oMarks.length) return false;
+	const countsMatchTurn =
+		xMarks.length === oMarks.length
+			? turn === 'x' || xMarks.length === 3
+			: xMarks.length === oMarks.length + 1 && turn === 'o';
+	if (!countsMatchTurn) return false;
+	// Only the side that just moved can have a line.
+	return !hasLine(turn === 'x' ? x : o);
 }
 
 const startState: GameState = {
@@ -128,18 +169,6 @@ export const handleClick = (index: number) => {
 	};
 	gameState.set(newState);
 };
-
-// check for winner and update state
-const winningCombinations = [
-	[0, 1, 2],
-	[3, 4, 5],
-	[6, 7, 8],
-	[0, 3, 6],
-	[1, 4, 7],
-	[2, 5, 8],
-	[0, 4, 8],
-	[2, 4, 6]
-];
 
 export const gameWon = derived(gameState, ($gameState) => {
 	let winner: Player | null = null;
