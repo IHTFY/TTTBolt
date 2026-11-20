@@ -27,20 +27,28 @@ describe('resultsAdSize', () => {
 describe('adForScreen', () => {
 	it('gives the results screen a box at each phone size and on desktop', () => {
 		for (const size of [...phones, { width: 1280, height: 800 }]) {
-			expect(adForScreen('results', { buyer: false, ...size })).not.toBeNull();
+			expect(adForScreen('results', { buyer: false, online: true, ...size })).not.toBeNull();
 		}
 	});
 
 	it('never gives the play screen a box, at any size', () => {
 		for (const size of [...phones, { width: 1280, height: 800 }, { width: 2560, height: 1440 }]) {
-			expect(adForScreen('play', { buyer: false, ...size })).toBeNull();
+			expect(adForScreen('play', { buyer: false, online: true, ...size })).toBeNull();
 		}
 	});
 
 	it('never gives a buyer of ad-free a box', () => {
 		for (const size of [...phones, { width: 1280, height: 800 }]) {
-			expect(adForScreen('results', { buyer: true, ...size })).toBeNull();
-			expect(adForScreen('play', { buyer: true, ...size })).toBeNull();
+			expect(adForScreen('results', { buyer: true, online: true, ...size })).toBeNull();
+			expect(adForScreen('play', { buyer: true, online: true, ...size })).toBeNull();
+		}
+	});
+});
+
+describe('adForScreen offline', () => {
+	it('gives the results screen no box, at any size, since no ad can be requested', () => {
+		for (const size of [...phones, { width: 1280, height: 800 }]) {
+			expect(adForScreen('results', { buyer: false, online: false, ...size })).toBeNull();
 		}
 	});
 });

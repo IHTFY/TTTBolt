@@ -13,7 +13,7 @@ declare global {
 declare global {
 	interface Window {
 		/** The shared ad loader, once https://ihtfy.com/ads/v1.js has loaded. */
-		ihtfyAds: { show(box: HTMLElement, key: string): void };
+		ihtfyAds: { show(box: HTMLElement, key: string): void; adFree(): Promise<boolean> };
 	}
 }
 

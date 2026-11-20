@@ -31,11 +31,19 @@ export function adFits(size: AdSize, width: number, height: number): boolean {
 	return box !== undefined && fitsWindow(box, width, height);
 }
 
-/** The box a screen gets in a window of this size: none on the play screen, none for a buyer of ad-free. */
+/**
+ * The box a screen gets in a window of this size: none on the play screen, none for a buyer of
+ * ad-free, and none while offline, since no ad can be requested and the box would stay empty.
+ */
 export function adForScreen(
 	screen: Screen,
-	{ buyer, width, height }: { buyer: boolean; width: number; height: number }
+	{
+		buyer,
+		online,
+		width,
+		height
+	}: { buyer: boolean; online: boolean; width: number; height: number }
 ): AdSize | null {
-	if (screen === 'play' || buyer) return null;
+	if (screen === 'play' || buyer || !online) return null;
 	return resultsAdSize(width, height);
 }
