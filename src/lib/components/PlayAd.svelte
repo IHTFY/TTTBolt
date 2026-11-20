@@ -4,13 +4,13 @@
 </script>
 
 <script lang="ts">
-	import { PLAY_AD_SLOT, mayBeAdFree, showPlayAd } from '$lib/ads';
+	import { PLAY_AD_SLOT, buyer, showPlayAd } from '$lib/ads';
 
 	// A new box, so a new ad, comes only with a new `game` or a new size, never on a timer.
 	let { game }: { game: number } = $props();
 
-	// A buyer gets no box at all, even before the loader has checked the token.
-	const buyer = mayBeAdFree();
+	// A saved token counts as a purchase until the loader has checked it, so a buyer never sees a box
+	// appear; a token the loader rejects brings the box back.
 	// The slot's width from the styles below: 160 or 300, or 0 where the ad doesn't fit.
 	let width = $state(0);
 
@@ -23,7 +23,7 @@
 <aside>
 	<p>Advertisements</p>
 	<div class="slot" bind:clientWidth={width}>
-		{#if width && !buyer}
+		{#if width && !$buyer}
 			{#key `${width}/${game}`}
 				<div
 					class="box"
@@ -41,7 +41,8 @@
 <style>
 	/* Only on windows wide enough to keep the board's size and both 150px gaps.
 	   It sits above the swooshes and the dark room, so nothing draws over the ad.
-	   A buyer's page never lays it out: app.html marks it before the first paint.
+	   A page with a saved token never lays it out until the loader rejects the token: app.html marks it
+	   before the first paint, and the loader's check takes the mark off again.
 	   The text keeps to the left edge, so a font swap or the loader's "Remove ads"
 	   link can't move it. */
 	aside {

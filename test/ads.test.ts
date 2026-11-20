@@ -87,6 +87,63 @@ describe('loadForBuyer', () => {
 	});
 });
 
+describe("the loader's verdict on a saved token", () => {
+	const tick = () => new Promise((resolve) => setTimeout(resolve));
+
+	async function startWithToken(adFree: () => Promise<boolean>) {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		window.ihtfyAds = { show: vi.fn(), adFree };
+		document.documentElement.classList.add('ad-free');
+		const ads = await loadAds();
+		const { get } = await import('svelte/store');
+		ads.loadForBuyer();
+		return { ...ads, buyerNow: () => get(ads.buyer) };
+	}
+
+	afterEach(() => document.documentElement.classList.remove('ad-free'));
+
+	it('treats the token as a purchase until the loader has answered', async () => {
+		const { buyerNow } = await startWithToken(() => new Promise(() => {}));
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+	});
+
+	it('keeps the buyer layout when the loader accepts the token', async () => {
+		const { buyerNow } = await startWithToken(() => Promise.resolve(true));
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+	});
+
+	it('restores the ordinary layout when the loader rejects the token', async () => {
+		const { buyerNow } = await startWithToken(() => Promise.resolve(false));
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(false);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
+	});
+
+	it('keeps the buyer layout when the loader cannot be reached', async () => {
+		const { buyerNow } = await startWithToken(() => Promise.resolve(false));
+		added[0].dispatchEvent(new Event('error'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+	});
+
+	it('starts without the buyer layout when no token is saved', async () => {
+		localStorage.clear();
+		const { buyer, loadForBuyer } = await loadAds();
+		const { get } = await import('svelte/store');
+		loadForBuyer();
+		expect(get(buyer)).toBe(false);
+		expect(added).toHaveLength(0);
+	});
+});
+
 describe('mayBeAdFree', () => {
 	it('is false without a token and true with one in localStorage or the cookie', async () => {
 		const { mayBeAdFree } = await loadAds();

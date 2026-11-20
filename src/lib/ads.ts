@@ -4,7 +4,10 @@
 // or key press: the loader arrives then on windows wide enough for the ad
 // beside the board, otherwise at the first win, and AdSense after it at
 // browser idle. A visitor who may have bought ad-free gets the loader at
-// startup instead (loadForBuyer), so it can hide the ads before they show.
+// startup instead (loadForBuyer), so it can hide the ads before they show, and
+// its verdict on the saved purchase decides the layout once it arrives.
+import { writable } from 'svelte/store';
+
 const LOADER = import.meta.env.VITE_ADS_LOADER || 'https://ihtfy.com/ads/v1.js';
 
 // The shared 300×250 display unit.
@@ -46,9 +49,24 @@ export function mayBeAdFree() {
 	return Boolean(stored) || /(?:^|;\s*)ihtfy-ad-free=/.test(cookie);
 }
 
+/**
+ * Whether the page lays out for a buyer of ad-free. A saved token is only a hint, so this starts as
+ * the hint and takes the loader's verdict once that arrives. A loader that can't be reached (offline)
+ * leaves the hint in place.
+ */
+export const buyer = writable(mayBeAdFree());
+
 /** Loads the loader now if this browser holds an ad-free token, so it can hide every ad box. */
 export function loadForBuyer() {
-	if (mayBeAdFree()) load().catch(() => {});
+	if (!mayBeAdFree()) return;
+	load()
+		.then(() => window.ihtfyAds.adFree())
+		.then((free) => {
+			// The class app.html set from the hint comes off when the loader rejects the token.
+			if (!free) document.documentElement.classList.remove('ad-free');
+			buyer.set(free);
+		})
+		.catch(() => {});
 }
 
 /** Fills `box` with an ad for the win or game named `key`; offline or on failure it stays empty. */

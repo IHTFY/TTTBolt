@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { adFits, adForScreen, type AdSize } from '$lib/adScreens';
-	import { mayBeAdFree, playAdIsStale } from '$lib/ads';
+	import { buyer, playAdIsStale } from '$lib/ads';
 	import AdSlot from '$lib/components/AdSlot.svelte';
 	import Game from '$lib/components/Game.svelte';
 	import LightSwitch from '$lib/components/LightSwitch.svelte';
@@ -10,20 +11,27 @@
 	// One ad per win during this visit. Opening the page on a saved win shows no ad: `won` starts
 	// undefined, so that first value isn't counted. The box's size is chosen once, as the win
 	// appears, so a browser bar sliding away doesn't swap the box for a new one. A window too small
-	// for the results layout with a box, or a buyer of ad-free, gets no box and the plain screen.
+	// for the results layout with a box, an offline visit (no ad can be requested), or a buyer of
+	// ad-free gets no box and the plain screen. A saved ad-free token counts as a purchase until the
+	// loader has checked it; if it rejects the token while the win is showing, the box comes then.
 	let wins = $state(0);
 	let adSize = $state<AdSize | null>(null);
 	let won: typeof $gameWon | undefined;
 	$effect(() => {
-		if ($gameWon && won === null) {
-			wins++;
-			adSize = adForScreen('results', {
-				buyer: mayBeAdFree(),
-				width: innerWidth,
-				height: innerHeight
-			});
-		}
-		won = $gameWon;
+		const winner = $gameWon;
+		const isBuyer = $buyer;
+		untrack(() => {
+			if (winner && won === null) wins++;
+			won = winner;
+			if (winner && wins > 0) {
+				adSize = adForScreen('results', {
+					buyer: isBuyer,
+					online: navigator.onLine,
+					width: innerWidth,
+					height: innerHeight
+				});
+			}
+		});
 	});
 	const adKey = $derived($gameWon && wins > 0 && adSize ? `win-${wins}` : '');
 
