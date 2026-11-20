@@ -24,6 +24,17 @@
 			} catch {
 				// Storage off: the cookie may still hold the token.
 			}
+			// Dark mode from the first paint: the saved choice, or the system setting (src/lib/theme.ts).
+			try {
+				var saved = localStorage.getItem('mode-watcher-mode');
+			} catch {
+				// Storage off: follow the system setting.
+			}
+			var light =
+				saved === 'light' ||
+				(saved !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches);
+			document.documentElement.classList.toggle('dark', !light);
+			document.documentElement.style.colorScheme = light ? 'light' : 'dark';
 			try {
 				if (/(?:^|;\s*)ihtfy-ad-free=/.test(document.cookie))
 					document.documentElement.classList.add('ad-free');
