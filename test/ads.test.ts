@@ -15,7 +15,7 @@ beforeEach(() => {
 		added.push(el as HTMLScriptElement);
 		return el;
 	});
-	window.ihtfyAds = { show: vi.fn() };
+	window.ihtfyAds = { show: vi.fn(), adFree: vi.fn().mockResolvedValue(false) };
 });
 
 afterEach(() => {
@@ -100,7 +100,11 @@ describe("the loader's verdict on a saved token", () => {
 		return { ...ads, buyerNow: () => get(ads.buyer) };
 	}
 
-	afterEach(() => document.documentElement.classList.remove('ad-free'));
+	afterEach(() => {
+		document.documentElement.classList.remove('ad-free');
+		// Lets a check still waiting for the browser to come back online fire now, so it can't leak into the next test.
+		window.dispatchEvent(new Event('online'));
+	});
 
 	it('treats the token as a purchase until the loader has answered', async () => {
 		const { buyerNow } = await startWithToken(() => new Promise(() => {}));
@@ -132,6 +136,19 @@ describe("the loader's verdict on a saved token", () => {
 		await tick();
 		expect(buyerNow()).toBe(true);
 		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+	});
+
+	it('tries the check again when the browser comes back online', async () => {
+		const { buyerNow } = await startWithToken(() => Promise.resolve(false));
+		added[0].dispatchEvent(new Event('error'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		window.dispatchEvent(new Event('online'));
+		expect(added).toHaveLength(2);
+		added[1].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(false);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
 	});
 
 	it('starts without the buyer layout when no token is saved', async () => {

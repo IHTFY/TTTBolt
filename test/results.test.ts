@@ -27,7 +27,7 @@ async function openPage({ token, online = true }: { token: boolean; online?: boo
 		added.push(el);
 		return el;
 	});
-	vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online);
+	const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online);
 	if (token) localStorage.setItem('ihtfy-ad-free', 'saved');
 	let answer: (free: boolean) => void = () => {};
 	window.ihtfyAds = {
@@ -43,6 +43,7 @@ async function openPage({ token, online = true }: { token: boolean; online?: boo
 	flushSync();
 	ads.loadForBuyer();
 	return {
+		goOnline: () => onLine.mockReturnValue(true),
 		// X takes the top row.
 		win: () => {
 			for (const cell of [0, 3, 1, 4, 2]) store.handleClick(cell);
@@ -96,5 +97,14 @@ describe('results screen ad', () => {
 		expect(document.querySelector(RESULTS_BOX)).toBeNull();
 		expect(document.querySelector('.results')).toBeNull();
 		expect(document.querySelector('.pinned')).not.toBeNull();
+	});
+
+	it('adds no box to a win made offline when the browser reconnects before the verdict', async () => {
+		const page = await openPage({ token: true, online: false });
+		page.win();
+		page.goOnline();
+		await page.verdict(false);
+		expect(document.querySelector(RESULTS_BOX)).toBeNull();
+		expect(document.querySelector('.results')).toBeNull();
 	});
 });

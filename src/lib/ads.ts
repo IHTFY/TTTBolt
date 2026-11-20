@@ -56,7 +56,11 @@ export function mayBeAdFree() {
  */
 export const buyer = writable(mayBeAdFree());
 
-/** Loads the loader now if this browser holds an ad-free token, so it can hide every ad box. */
+/**
+ * Loads the loader now if this browser holds an ad-free token, so it can hide every ad box, and
+ * takes its verdict on the token. If the loader can't be reached, the token stays the hint until
+ * the browser is back online, when the check is tried again.
+ */
 export function loadForBuyer() {
 	if (!mayBeAdFree()) return;
 	load()
@@ -66,8 +70,7 @@ export function loadForBuyer() {
 			if (!free) document.documentElement.classList.remove('ad-free');
 			buyer.set(free);
 		})
-		// No verdict (the loader didn't arrive): the saved token stays the hint, so a buyer offline keeps the buyer layout.
-		.catch(() => {});
+		.catch(() => addEventListener('online', loadForBuyer, { once: true }));
 }
 
 /** Fills `box` with an ad for the win or game named `key`; offline or on failure it stays empty. */
