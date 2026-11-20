@@ -7,6 +7,7 @@ const KEY = 'mode-watcher-mode';
 type Mode = 'light' | 'dark';
 type Choice = Mode | 'system';
 
+const COLORS = { light: '#2e9fe0', dark: '#07090d' };
 const inBrowser = typeof window !== 'undefined';
 const lightQuery =
 	inBrowser && typeof window.matchMedia === 'function'
@@ -50,10 +51,14 @@ export function watchMode(): () => void {
 	};
 	lightQuery?.addEventListener('change', onSystem);
 	window.addEventListener('storage', onStorage);
+	// Catch up on anything that changed before the listeners were attached.
+	choice.set(savedChoice());
+	system.set(lightQuery?.matches ? 'light' : 'dark');
 	const stopApplying = mode.subscribe(($mode) => {
 		const root = document.documentElement;
 		root.classList.toggle('dark', $mode === 'dark');
 		root.style.colorScheme = $mode;
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', COLORS[$mode]);
 	});
 	return () => {
 		lightQuery?.removeEventListener('change', onSystem);

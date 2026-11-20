@@ -41,12 +41,16 @@ describe('light switch with blocked storage', () => {
 		blockStorage();
 		const { get } = await import('svelte/store');
 		const theme = await loadTheme();
+		const meta = document.head.appendChild(document.createElement('meta'));
+		meta.name = 'theme-color';
 		const stop = theme.watchMode();
 		const before = get(theme.mode);
 		theme.toggleMode();
 		const after = get(theme.mode);
 		expect(after).not.toBe(before);
 		expect(document.documentElement.classList.contains('dark')).toBe(after === 'dark');
+		expect(meta.content).toBe(after === 'dark' ? '#07090d' : '#2e9fe0');
+		meta.remove();
 		stop();
 	});
 });

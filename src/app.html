@@ -11,6 +11,7 @@
 			name="description"
 			content="A tic-tac-toe twist where each player keeps only three marks on the board, and the oldest one vanishes with every new move. Plays offline."
 		/>
+		<meta name="theme-color" content="#2e9fe0" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -37,6 +38,9 @@
 					matchMedia('(prefers-color-scheme: light)').matches);
 			document.documentElement.classList.toggle('dark', !light);
 			document.documentElement.style.colorScheme = light ? 'light' : 'dark';
+			document
+				.querySelector('meta[name="theme-color"]')
+				.setAttribute('content', light ? '#2e9fe0' : '#07090d');
 			try {
 				if (/(?:^|;\s*)ihtfy-ad-free=/.test(document.cookie))
 					document.documentElement.classList.add('ad-free');
