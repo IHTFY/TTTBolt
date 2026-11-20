@@ -136,6 +136,8 @@
 		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleReset()}
 	>
 		<rect x="-30" y="-24" width="60" height="48" fill="transparent" />
+		<circle class="ring-edge" r="21.5" />
+		<circle class="ring" r="19.5" />
 		<circle r="15" fill="#e3b400" />
 		<circle r="13" fill="#2b2b2b" />
 		<path
@@ -203,6 +205,26 @@
 	.btn {
 		cursor: pointer;
 		outline: none;
+	}
+	/* A ring around the reset button for keyboard focus: white inside a dark edge, so it shows on the
+	   yellow case and in the dark room. */
+	.ring,
+	.ring-edge {
+		fill: none;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.ring {
+		stroke: #fff;
+		stroke-width: 3;
+	}
+	.ring-edge {
+		stroke: #111;
+		stroke-width: 1.5;
+	}
+	.btn:focus-visible .ring,
+	.btn:focus-visible .ring-edge {
+		opacity: 1;
 	}
 	.cell:focus-visible {
 		stroke: #ffffff55;

@@ -131,4 +131,16 @@ describe('results screen ad', () => {
 		vi.unstubAllGlobals();
 		expect(document.querySelector(RESULTS_BOX)).not.toBeNull();
 	});
+
+	it('moves keyboard focus to the first cell of the new board after Play again', async () => {
+		const page = await openPage({ token: false });
+		page.win();
+		const again = document.querySelector<HTMLButtonElement>('.again')!;
+		again.focus();
+		expect(document.activeElement).toBe(again);
+		again.click();
+		await tick();
+		expect(document.querySelector('.again')).toBeNull();
+		expect(document.activeElement?.getAttribute('aria-label')).toBe('Cell 1: empty');
+	});
 });

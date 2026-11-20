@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { adFits, adForScreen, type AdSize } from '$lib/adScreens';
 	import { buyer, playAdIsStale } from '$lib/ads';
 	import AdSlot from '$lib/components/AdSlot.svelte';
@@ -7,6 +7,14 @@
 	import LightSwitch from '$lib/components/LightSwitch.svelte';
 	import PlayAd from '$lib/components/PlayAd.svelte';
 	import { board, gameState, gameWon, handleReset } from '$lib/stores/gameStore';
+
+	// The Play again button leaves the page with the result, which would drop keyboard focus to the
+	// top of the document. Focus goes to the first cell of the new board instead.
+	async function playAgain() {
+		handleReset();
+		await tick();
+		document.querySelector<SVGElement>('[role="button"][aria-label^="Cell 1:"]')?.focus();
+	}
 
 	// One ad per win during this visit. Opening the page on a saved win shows no ad: `won` starts
 	// undefined, so that first value isn't counted. The box's size is chosen once, as the win
@@ -111,7 +119,7 @@
 		<!-- Everything to press comes before the ad, so no control sits beside it or past it. -->
 		<div class="results">
 			<div class="controls">
-				<button class="again" onclick={handleReset}>Play again</button>
+				<button class="again" onclick={playAgain}>Play again</button>
 				<LightSwitch inline />
 			</div>
 			<AdSlot {adKey} size={adSize} {links} hidden={!adFitsNow} />
