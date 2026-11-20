@@ -46,7 +46,7 @@ export function toggleMode() {
 export function watchMode(): () => void {
 	const onSystem = (event: MediaQueryListEvent) => system.set(event.matches ? 'light' : 'dark');
 	const onStorage = (event: StorageEvent) => {
-		if (event.key === KEY) choice.set(savedChoice());
+		if (event.key === KEY || event.key === null) choice.set(savedChoice());
 	};
 	lightQuery?.addEventListener('change', onSystem);
 	window.addEventListener('storage', onStorage);

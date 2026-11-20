@@ -61,4 +61,22 @@ describe('light switch with working storage', () => {
 		expect(get(theme.mode)).toBe('light');
 		expect(localStorage.getItem('mode-watcher-mode')).toBe('light');
 	});
+
+	it('drops a saved choice that another tab cleared', async () => {
+		vi.stubGlobal('matchMedia', () => ({
+			matches: true,
+			addEventListener: () => {},
+			removeEventListener: () => {}
+		}));
+		localStorage.setItem('mode-watcher-mode', 'dark');
+		const { get } = await import('svelte/store');
+		const theme = await loadTheme();
+		const stop = theme.watchMode();
+		expect(get(theme.mode)).toBe('dark');
+		localStorage.clear();
+		window.dispatchEvent(new StorageEvent('storage', { key: null }));
+		// Nothing saved now, so the system setting (light) applies.
+		expect(get(theme.mode)).toBe('light');
+		stop();
+	});
 });

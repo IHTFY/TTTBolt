@@ -32,7 +32,9 @@
 			}
 			var light =
 				saved === 'light' ||
-				(saved !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches);
+				(saved !== 'dark' &&
+					typeof matchMedia === 'function' &&
+					matchMedia('(prefers-color-scheme: light)').matches);
 			document.documentElement.classList.toggle('dark', !light);
 			document.documentElement.style.colorScheme = light ? 'light' : 'dark';
 			try {
