@@ -66,6 +66,7 @@ export function loadForBuyer() {
 			if (!free) document.documentElement.classList.remove('ad-free');
 			buyer.set(free);
 		})
+		// No verdict (the loader didn't arrive): the saved token stays the hint, so a buyer offline keeps the buyer layout.
 		.catch(() => {});
 }
 
