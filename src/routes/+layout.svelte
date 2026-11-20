@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ModeWatcher } from 'mode-watcher';
 	import '@fontsource/nunito/latin-600.css';
 	import '@fontsource/nunito/latin-800.css';
 	import '../app.css';
@@ -8,9 +7,11 @@
 	import { loadForBuyer } from '$lib/ads';
 	import { board } from '$lib/stores/gameStore';
 	import { reloadOnUpdate } from '$lib/updates';
+	import { watchMode } from '$lib/theme';
 	let { children } = $props();
 
 	onMount(loadForBuyer);
+	onMount(watchMode);
 
 	// Keep the offline copy fresh: look for a new deploy whenever the app comes into view, and
 	// reload once a new version has taken over, but never in the middle of a game: with marks on the
@@ -31,5 +32,4 @@
 	});
 </script>
 
-<ModeWatcher disableTransitions={false} themeColors={{ light: '#2e9fe0', dark: '#07090d' }} />
 {@render children()}

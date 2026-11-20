@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { mode, toggleMode } from 'mode-watcher';
+	import { mode, toggleMode } from '$lib/theme';
 
 	// `inline` puts the switch in the page's flow instead of the bottom-right corner.
 	let { inline = false }: { inline?: boolean } = $props();
