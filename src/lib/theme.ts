@@ -25,7 +25,8 @@ function savedChoice(): Choice {
 }
 
 const choice = writable<Choice>(inBrowser ? savedChoice() : 'system');
-const system = writable<Mode>(lightQuery?.matches ? 'light' : 'dark');
+// The prerendered page has the lights on; the visitor's own setting applies once the page loads.
+const system = writable<Mode>(inBrowser && !lightQuery?.matches ? 'dark' : 'light');
 
 /** The mode in effect: the saved choice, or the system setting when there is none. */
 export const mode = derived(
@@ -47,6 +48,12 @@ export function toggleMode() {
 export function watchMode(): () => void {
 	const onSystem = (event: MediaQueryListEvent) => system.set(event.matches ? 'light' : 'dark');
 	const onStorage = (event: StorageEvent) => {
+		try {
+			// Session storage changes, and other storage areas, are not ours.
+			if (event.storageArea !== localStorage) return;
+		} catch {
+			return;
+		}
 		if (event.key === KEY || event.key === null) choice.set(savedChoice());
 	};
 	lightQuery?.addEventListener('change', onSystem);

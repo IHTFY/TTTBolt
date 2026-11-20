@@ -78,7 +78,7 @@ describe('light switch with working storage', () => {
 		const stop = theme.watchMode();
 		expect(get(theme.mode)).toBe('dark');
 		localStorage.clear();
-		window.dispatchEvent(new StorageEvent('storage', { key: null }));
+		window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage }));
 		// Nothing saved now, so the system setting (light) applies.
 		expect(get(theme.mode)).toBe('light');
 		stop();
