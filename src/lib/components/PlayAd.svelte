@@ -14,7 +14,13 @@
 	// A saved token counts as a purchase until the loader has checked it, so a buyer never sees a box
 	// appear; a token the loader rejects brings the box back.
 	// The slot's width from the styles below: 160 or 300, or 0 where the ad doesn't fit.
+	let measured = $state(0);
+	// Kept while the rail is folded away, so a window resize can't make a new box, and ask for an
+	// ad, that nobody can see; it catches up when the rail returns.
 	let width = $state(0);
+	$effect(() => {
+		if (!hidden) width = measured;
+	});
 
 	function ad(box: HTMLElement) {
 		showPlayAd(box, `play/${++made}`);
@@ -24,7 +30,7 @@
 <!-- Beside the board, 150px or more from it and from the light switch; the slot keeps its size whether or not an ad fills it. -->
 <aside class:hidden>
 	<p>Advertisements</p>
-	<div class="slot" bind:clientWidth={width}>
+	<div class="slot" bind:clientWidth={measured}>
 		{#if width && !$buyer}
 			{#key `${width}/${game}`}
 				<div

@@ -172,4 +172,45 @@ describe('results screen ad', () => {
 		expect(rail.classList.contains('hidden')).toBe(false);
 		vi.unstubAllGlobals();
 	});
+
+	it('keeps the folded rail box as it is when the window resizes, and sizes it again with the next game', async () => {
+		let slotWidth = 300;
+		const notify: (() => void)[] = [];
+		vi.stubGlobal(
+			'ResizeObserver',
+			class {
+				callback: (entries: unknown[]) => void;
+				constructor(callback: (entries: unknown[]) => void) {
+					this.callback = callback;
+				}
+				observe(target: Element) {
+					notify.push(() => this.callback([{ target }]));
+				}
+				unobserve() {}
+				disconnect() {}
+			}
+		);
+		vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (
+			this: HTMLElement
+		) {
+			return this.classList.contains('slot') ? slotWidth : 0;
+		});
+		const resize = async (width: number) => {
+			slotWidth = width;
+			notify.forEach((fire) => fire());
+			await tick();
+		};
+		const page = await openPage({ token: false });
+		await tick();
+		const railBox = () => document.querySelector('.frame aside .box');
+		const first = railBox();
+		expect(first?.getAttribute('data-ad-size')).toBe('300x600');
+		page.win();
+		await resize(160);
+		expect(railBox()).toBe(first);
+		document.querySelector<HTMLButtonElement>('.again')!.click();
+		await tick();
+		expect(railBox()?.getAttribute('data-ad-size')).toBe('160x600');
+		vi.unstubAllGlobals();
+	});
 });
