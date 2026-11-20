@@ -7,12 +7,20 @@
 	import { PLAY_AD_SLOT, buyer, showPlayAd } from '$lib/ads';
 
 	// A new box, so a new ad, comes only with a new `game` or a new size, never on a timer.
-	let { game }: { game: number } = $props();
+	// `hidden` folds the rail away while the results screen shows its own box, so the two never
+	// overlap or compete; the box stays mounted, so it isn't asked for a new ad when the rail returns.
+	let { game, hidden = false }: { game: number; hidden?: boolean } = $props();
 
 	// A saved token counts as a purchase until the loader has checked it, so a buyer never sees a box
 	// appear; a token the loader rejects brings the box back.
 	// The slot's width from the styles below: 160 or 300, or 0 where the ad doesn't fit.
+	let measured = $state(0);
+	// Kept while the rail is folded away, so a window resize can't make a new box, and ask for an
+	// ad, that nobody can see; it catches up when the rail returns.
 	let width = $state(0);
+	$effect(() => {
+		if (!hidden) width = measured;
+	});
 
 	function ad(box: HTMLElement) {
 		showPlayAd(box, `play/${++made}`);
@@ -20,9 +28,9 @@
 </script>
 
 <!-- Beside the board, 150px or more from it and from the light switch; the slot keeps its size whether or not an ad fills it. -->
-<aside>
+<aside class:hidden>
 	<p>Advertisements</p>
-	<div class="slot" bind:clientWidth={width}>
+	<div class="slot" bind:clientWidth={measured}>
 		{#if width && !$buyer}
 			{#key `${width}/${game}`}
 				<div
@@ -62,6 +70,14 @@
 	}
 	:global(html.ad-free) aside {
 		display: none;
+	}
+	/* Out of the layout, so the board and the results center together, but still measured at its
+	   width, so the box inside it isn't torn down. It takes no height and can't be reached. */
+	aside.hidden {
+		position: absolute;
+		visibility: hidden;
+		max-height: 0;
+		overflow: hidden;
 	}
 	.slot {
 		width: 160px;
