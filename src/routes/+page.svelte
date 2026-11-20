@@ -203,10 +203,13 @@
 	:global(.dark) header {
 		opacity: 0.35;
 	}
+	/* The links take their own row under the board, so larger text or a short window shrinks the
+	   board instead of letting a link cover its New game control. */
 	.pinned {
-		position: absolute;
-		left: max(16px, env(safe-area-inset-left));
-		bottom: max(16px, env(safe-area-inset-bottom));
+		position: relative;
+		flex: none;
+		align-self: flex-start;
+		margin-left: max(0px, env(safe-area-inset-left));
 		z-index: 10;
 	}
 	.links {
