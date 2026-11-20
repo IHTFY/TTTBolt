@@ -133,7 +133,7 @@
 		aria-label="New game"
 		transform="translate(334 398)"
 		onclick={handleReset}
-		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleReset()}
+		onkeydown={(e) => !e.repeat && (e.key === 'Enter' || e.key === ' ') && handleReset()}
 	>
 		<rect x="-30" y="-24" width="60" height="48" fill="transparent" />
 		<circle r="15" fill="#e3b400" />
@@ -150,6 +150,12 @@
 
 	<!-- room darkness: everything above this is unlit plastic, everything below emits light -->
 	<rect class="lights-off" x="10" y="10" width="380" height="436" rx="78" />
+
+	<!-- keyboard focus ring for the reset button; drawn after the darkness so the dark room doesn't dim it -->
+	<g class="focus-ring" transform="translate(334 398)">
+		<circle class="ring-edge" r="21.5" />
+		<circle class="ring" r="19.5" />
+	</g>
 
 	<!-- marks -->
 	{#each $board as player, i (i)}
@@ -183,7 +189,7 @@
 			tabindex="0"
 			aria-label="Cell {i + 1}: {$board[i] ?? 'empty'}"
 			onclick={() => handleClick(i)}
-			onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleClick(i)}
+			onkeydown={(e) => !e.repeat && (e.key === 'Enter' || e.key === ' ') && handleClick(i)}
 		/>
 	{/each}
 </svg>
@@ -203,6 +209,26 @@
 	.btn {
 		cursor: pointer;
 		outline: none;
+	}
+	/* A ring around the reset button for keyboard focus: white inside a dark edge, so it shows on the
+	   yellow case and in the dark room. */
+	.ring,
+	.ring-edge {
+		fill: none;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.ring {
+		stroke: #fff;
+		stroke-width: 3;
+	}
+	.ring-edge {
+		stroke: #111;
+		stroke-width: 1.5;
+	}
+	.btn:focus-visible ~ .focus-ring .ring,
+	.btn:focus-visible ~ .focus-ring .ring-edge {
+		opacity: 1;
 	}
 	.cell:focus-visible {
 		stroke: #ffffff55;
