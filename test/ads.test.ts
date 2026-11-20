@@ -151,6 +151,16 @@ describe("the loader's verdict on a saved token", () => {
 		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
 	});
 
+	it('drops the buyer layout when the token is gone by the time the check is tried again', async () => {
+		const { buyerNow } = await startWithToken(() => Promise.resolve(true));
+		added[0].dispatchEvent(new Event('error'));
+		await tick();
+		localStorage.clear();
+		window.dispatchEvent(new Event('online'));
+		expect(buyerNow()).toBe(false);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
+	});
+
 	it('starts without the buyer layout when no token is saved', async () => {
 		localStorage.clear();
 		const { buyer, loadForBuyer } = await loadAds();

@@ -5,8 +5,11 @@ const RESULTS_BOX = '[data-ad-slot="6470163205"]';
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 let added: HTMLScriptElement[];
+let unmountPage: (() => void) | undefined;
 
 afterEach(() => {
+	unmountPage?.();
+	unmountPage = undefined;
 	vi.restoreAllMocks();
 	// @ts-expect-error reset between tests
 	delete window.ihtfyAds;
@@ -35,15 +38,17 @@ async function openPage({ token, online = true }: { token: boolean; online?: boo
 		adFree: () => new Promise<boolean>((resolve) => (answer = resolve))
 	};
 	// Svelte is imported after the module reset so the page and `mount` share one runtime.
-	const { flushSync, mount } = await import('svelte');
+	const { flushSync, mount, unmount } = await import('svelte');
 	const ads = await import('../src/lib/ads');
 	const store = await import('../src/lib/stores/gameStore');
 	const { default: Page } = await import('../src/routes/+page.svelte');
-	mount(Page, { target: document.body });
+	const app = mount(Page, { target: document.body });
+	unmountPage = () => unmount(app);
 	flushSync();
 	ads.loadForBuyer();
 	return {
 		goOnline: () => onLine.mockReturnValue(true),
+		goOffline: () => onLine.mockReturnValue(false),
 		// X takes the top row.
 		win: () => {
 			for (const cell of [0, 3, 1, 4, 2]) store.handleClick(cell);
@@ -106,5 +111,24 @@ describe('results screen ad', () => {
 		await page.verdict(false);
 		expect(document.querySelector(RESULTS_BOX)).toBeNull();
 		expect(document.querySelector('.results')).toBeNull();
+	});
+
+	it('adds no box to a win made online when the browser drops offline before the verdict', async () => {
+		const page = await openPage({ token: true });
+		page.win();
+		page.goOffline();
+		await page.verdict(false);
+		expect(document.querySelector(RESULTS_BOX)).toBeNull();
+	});
+
+	it('keeps the box chosen at the win when the window changes before the verdict', async () => {
+		const page = await openPage({ token: true });
+		page.win();
+		// A phone turned on its side before the loader answered.
+		vi.stubGlobal('innerHeight', 300);
+		window.dispatchEvent(new Event('resize'));
+		await page.verdict(false);
+		vi.unstubAllGlobals();
+		expect(document.querySelector(RESULTS_BOX)).not.toBeNull();
 	});
 });

@@ -62,7 +62,12 @@ export const buyer = writable(mayBeAdFree());
  * the browser is back online, when the check is tried again.
  */
 export function loadForBuyer() {
-	if (!mayBeAdFree()) return;
+	if (!mayBeAdFree()) {
+		// The token is gone (a cookie that expired while the check waited): nothing to hold the buyer layout.
+		document.documentElement.classList.remove('ad-free');
+		buyer.set(false);
+		return;
+	}
 	load()
 		.then(() => window.ihtfyAds.adFree())
 		.then((free) => {

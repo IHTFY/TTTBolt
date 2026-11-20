@@ -17,25 +17,25 @@
 	let wins = $state(0);
 	let adSize = $state<AdSize | null>(null);
 	let won: typeof $gameWon | undefined;
-	// Whether the visit was online when the win appeared, so reconnecting later doesn't add a box to a win made offline.
-	let onlineAtWin = true;
+	// The box this win could get, chosen as it appears from the window and the connection then, so
+	// reconnecting, going offline or turning the phone before the loader answers doesn't change it.
+	let winSize: AdSize | null = null;
 	$effect(() => {
 		const winner = $gameWon;
 		const isBuyer = $buyer;
 		untrack(() => {
 			if (winner && won === null) {
 				wins++;
-				onlineAtWin = navigator.onLine;
-			}
-			won = winner;
-			if (winner && wins > 0) {
-				adSize = adForScreen('results', {
-					buyer: isBuyer,
-					online: onlineAtWin,
+				winSize = adForScreen('results', {
+					buyer: false,
+					online: navigator.onLine,
 					width: innerWidth,
 					height: innerHeight
 				});
 			}
+			won = winner;
+			// A box needs a connection when it is added, since no ad can be requested offline.
+			if (winner && wins > 0) adSize = isBuyer || !navigator.onLine ? null : winSize;
 		});
 	});
 	const adKey = $derived($gameWon && wins > 0 && adSize ? `win-${wins}` : '');
