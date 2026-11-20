@@ -143,4 +143,18 @@ describe('results screen ad', () => {
 		expect(document.querySelector('.again')).toBeNull();
 		expect(document.activeElement?.getAttribute('aria-label')).toBe('Cell 1: empty');
 	});
+
+	it('does not place a mark from a held Enter key that moved focus to a cell', async () => {
+		const page = await openPage({ token: false });
+		page.win();
+		document.querySelector<HTMLButtonElement>('.again')!.click();
+		await tick();
+		const cell = document.activeElement!;
+		cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true }));
+		await tick();
+		expect(cell.getAttribute('aria-label')).toBe('Cell 1: empty');
+		cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await tick();
+		expect(cell.getAttribute('aria-label')).toBe('Cell 1: x');
+	});
 });
