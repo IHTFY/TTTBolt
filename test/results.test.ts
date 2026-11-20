@@ -157,4 +157,19 @@ describe('results screen ad', () => {
 		await tick();
 		expect(cell.getAttribute('aria-label')).toBe('Cell 1: x');
 	});
+
+	it('folds the side rail away while the results box shows, and brings it back with the next game', async () => {
+		vi.stubGlobal('innerWidth', 1536);
+		vi.stubGlobal('innerHeight', 768);
+		const page = await openPage({ token: false });
+		const rail = document.querySelector('.frame aside')!;
+		expect(rail.classList.contains('hidden')).toBe(false);
+		page.win();
+		expect(document.querySelector(RESULTS_BOX)).not.toBeNull();
+		expect(rail.classList.contains('hidden')).toBe(true);
+		document.querySelector<HTMLButtonElement>('.again')!.click();
+		await tick();
+		expect(rail.classList.contains('hidden')).toBe(false);
+		vi.unstubAllGlobals();
+	});
 });

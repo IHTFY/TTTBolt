@@ -105,7 +105,7 @@
 			</div>
 		</div>
 
-		<PlayAd game={playAd} />
+		<PlayAd game={playAd} hidden={!!adKey} />
 	</div>
 
 	{#snippet links()}
