@@ -48,9 +48,130 @@
 				// Cookies off too: the page lays out with the ad's space, as for anyone else.
 			}
 		</script>
+		<style>
+			/* Installed-app launch: the first paint copies Chrome's launch screen (manifest background,
+			   maskable icon at 128px, name near the bottom), then launchExit() in Game.svelte carries
+			   the icon's board onto the game's board. */
+			#launch {
+				display: none;
+			}
+			.launching #launch {
+				position: fixed;
+				inset: 0;
+				z-index: 2147483647;
+				display: grid;
+				place-items: center;
+				background: #2e9fe0;
+			}
+			#launch-icon {
+				width: 128px;
+				height: 128px;
+			}
+			#launch-name {
+				position: absolute;
+				inset: auto 0 56px;
+				font:
+					24px/1 Roboto,
+					system-ui,
+					sans-serif;
+				text-align: center;
+				color: rgb(0 0 0 / 0.87);
+			}
+		</style>
+		<script>
+			// Plays once per fresh launch of the installed app: never in a browser tab, on reload, or on return.
+			(() => {
+				const root = document.documentElement;
+				try {
+					const nav = performance.getEntriesByType('navigation')[0];
+					const app = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+					if (!app || nav?.type !== 'navigate' || sessionStorage.getItem('launched')) return;
+					sessionStorage.setItem('launched', '1');
+				} catch {
+					return;
+				}
+				root.classList.add('launching');
+				const end = () => {
+					clearTimeout(fallback);
+					root.classList.remove('launching');
+					document.getElementById('launch')?.remove();
+				};
+				// The game never stays hidden behind the copy if it fails to call launchExit.
+				const fallback = setTimeout(end, 4000);
+				// play(overlay) starts the game's exit and returns its Web Animations.
+				window.launchExit = (play) => {
+					clearTimeout(fallback);
+					const overlay = document.getElementById('launch');
+					// Too late: the fallback already removed the copy.
+					if (!overlay) return;
+					let animations = [];
+					if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+						try {
+							animations = play(overlay);
+						} catch {
+							animations = [];
+						}
+					}
+					if (!animations.length) {
+						animations = [
+							overlay.animate(
+								{ opacity: [1, 0] },
+								{ duration: 200, easing: 'ease-out', fill: 'forwards' }
+							)
+						];
+					}
+					overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), {
+						once: true
+					});
+					Promise.all(animations.map((a) => a.finished)).then(end, end);
+				};
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<!-- The launch screen's copy (maskable icon, static/icons/maskable.svg). Its marks carry
+		     classes so the exit can put them out one by one. -->
+		<div id="launch" aria-hidden="true">
+			<svg id="launch-icon" viewBox="0 0 512 512">
+				<rect class="tile" width="512" height="512" fill="#f7cc0e" />
+				<g transform="translate(111 111) scale(0.8056)">
+					<rect width="360" height="360" rx="54" fill="#141416" />
+					<g stroke="#f2f2f2" stroke-width="12" stroke-linecap="round">
+						<path d="M120 30V330M240 30V330M30 120H330M30 240H330" />
+					</g>
+					<g fill="none" stroke-linecap="round">
+						<path
+							class="mark"
+							stroke="#2ea8ff"
+							stroke-width="19"
+							stroke-linecap="butt"
+							d="M84.76 41.34A31 31 0 0 1 84.76 78.66M78.66 84.76A31 31 0 0 1 41.34 84.76M35.24 78.66A31 31 0 0 1 35.24 41.34M41.34 35.24A31 31 0 0 1 78.66 35.24"
+						/>
+						<path
+							class="mark"
+							stroke="#ff5a2c"
+							stroke-width="21"
+							d="M30 270L90 330M90 270L30 330"
+						/>
+						<path
+							class="mark"
+							stroke="#2ea8ff"
+							stroke-width="19"
+							stroke-linecap="butt"
+							d="M324.76 41.34A31 31 0 0 1 324.76 78.66M318.66 84.76A31 31 0 0 1 281.34 84.76M275.24 78.66A31 31 0 0 1 275.24 41.34M281.34 35.24A31 31 0 0 1 318.66 35.24"
+						/>
+						<path
+							class="mark"
+							stroke="#ff5a2c"
+							stroke-width="21"
+							d="M150 150L210 210M210 150L150 210"
+						/>
+					</g>
+				</g>
+			</svg>
+			<span id="launch-name">Tic-Tac-Toe Bolt</span>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
