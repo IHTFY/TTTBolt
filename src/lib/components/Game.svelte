@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import {
 		board,
 		dying,
@@ -23,6 +24,53 @@
 		'C260 360 240 351 200 351 C160 351 140 360 83 360 A48 48 0 0 1 35 312 ' +
 		'C35 255 44 235 44 195 C44 155 35 135 35 78 A48 48 0 0 1 83 30 Z';
 
+	// A fresh launch of the installed app opens on a copy of the launch screen (src/app.html). Its
+	// icon's board lands on this board's glass while the yellow tile melts into the case, and the
+	// icon's four marks go out oldest first, dimming as a mark about to vanish does in play.
+	let device: SVGSVGElement;
+	onMount(() => {
+		window.launchExit?.((overlay) => {
+			const icon = overlay.querySelector<SVGSVGElement>('#launch-icon')!;
+			const from = icon.getBoundingClientRect();
+			const to = device.getBoundingClientRect();
+			// The icon's board is 290 of its 512 units; the glass is 330 of the device's 400, centered on (200, 195).
+			const unit = to.width / 400;
+			const scale = (330 * unit) / ((from.width * 290) / 512);
+			const dx = to.left + 200 * unit - (from.left + from.width / 2);
+			const dy = to.top + 195 * unit - (from.top + from.height / 2);
+			const dim = { '#ff5a2c': '#6d2616', '#2ea8ff': '#17405f' };
+			const marks = [...icon.querySelectorAll<SVGPathElement>('.mark')].map((mark, i) => {
+				const lit = mark.getAttribute('stroke') as keyof typeof dim;
+				return mark.animate(
+					[
+						{ stroke: lit, opacity: 1 },
+						{ stroke: dim[lit], opacity: 1, offset: 0.4 },
+						{ stroke: dim[lit], opacity: 0 }
+					],
+					{ delay: 300 + i * 130, duration: 300, fill: 'forwards' }
+				);
+			});
+			return [
+				overlay.animate(
+					{ backgroundColor: ['#2e9fe0', 'rgb(46 159 224 / 0)'] },
+					{ duration: 600, easing: 'ease-in', fill: 'forwards' }
+				),
+				overlay
+					.querySelector('#launch-name')!
+					.animate({ opacity: [1, 0] }, { duration: 150, fill: 'forwards' }),
+				icon.animate(
+					{ transform: ['none', `translate(${dx}px, ${dy}px) scale(${scale})`] },
+					{ duration: 750, easing: 'cubic-bezier(0.5, 0, 0.2, 1)', fill: 'forwards' }
+				),
+				icon
+					.querySelector('.tile')!
+					.animate({ opacity: [1, 0] }, { duration: 500, easing: 'ease-in', fill: 'forwards' }),
+				...marks,
+				icon.animate({ opacity: [1, 0] }, { delay: 850, duration: 200, fill: 'forwards' })
+			];
+		});
+	});
+
 	function state(i: number): 'alive' | 'dying' | 'win' | 'lose' {
 		if ($winningLine) return $winningLine.includes(i) ? 'win' : 'lose';
 		return i === $dying ? 'dying' : 'alive';
@@ -30,6 +78,7 @@
 </script>
 
 <svg
+	bind:this={device}
 	class="device"
 	viewBox="0 0 400 460"
 	xmlns="http://www.w3.org/2000/svg"

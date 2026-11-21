@@ -48,9 +48,191 @@
 				// Cookies off too: the page lays out with the ad's space, as for anyone else.
 			}
 		</script>
+		<style>
+			/* Installed-app launch: the first paint copies Chrome's launch screen (manifest background,
+			   maskable icon at 128px, name near the bottom), then launchExit() in Game.svelte carries
+			   the icon's board onto the game's board. */
+			#launch {
+				display: none;
+			}
+			.launching #launch {
+				position: fixed;
+				inset: 0;
+				z-index: 2147483647;
+				display: grid;
+				place-items: center;
+				background: #2e9fe0;
+			}
+			/* Until the exit starts, the page behind the copy can't take focus or keys. */
+			.launching:not(.leaving) #launch + div {
+				visibility: hidden;
+			}
+			#launch-icon {
+				width: 128px;
+				height: 128px;
+			}
+			#launch-name {
+				position: absolute;
+				inset: auto 0 56px;
+				font:
+					24px/1 Roboto,
+					system-ui,
+					sans-serif;
+				text-align: center;
+				color: rgb(0 0 0 / 0.87);
+			}
+		</style>
+		<script>
+			// Plays once per fresh launch of the installed app: never in a browser tab, on reload, or on return.
+			(() => {
+				const root = document.documentElement;
+				try {
+					const nav = performance.getEntriesByType('navigation')[0];
+					const app = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+					if (!app || nav?.type !== 'navigate' || sessionStorage.getItem('launched')) return;
+					sessionStorage.setItem('launched', '1');
+				} catch {
+					return;
+				}
+				root.classList.add('launching');
+				// A tap skips to the end, even one made before the exit starts. The copy stays until that
+				// tap's click has landed on it, so the tap doesn't also play a move on the board below. A
+				// press that ends with no click (a right-click, a drag) lets go shortly after. Turning the
+				// phone moves the board, so it skips to the end too.
+				let animations = [];
+				let tapped = false;
+				let pressed = false;
+				let finished = false;
+				let letGo;
+				const skip = () => animations.forEach((a) => a.finish());
+				const close = () => finished && !pressed && end();
+				const release = () => {
+					pressed = false;
+					close();
+				};
+				// Taps and keys during the launch are the copy's alone. Nothing registered after this sees
+				// them, such as the side ad's wait for the player's first tap or key.
+				const own = (event) => event.stopImmediatePropagation();
+				const listeners = {
+					pointerdown: (event) => {
+						own(event);
+						// A new press keeps the copy up, whatever an earlier press left pending.
+						clearTimeout(letGo);
+						tapped = pressed = true;
+						skip();
+					},
+					pointerup: (event) => {
+						own(event);
+						letGo = setTimeout(release, 400);
+					},
+					click: (event) => {
+						own(event);
+						release();
+					},
+					pointercancel: (event) => {
+						own(event);
+						release();
+					},
+					keydown: own,
+					resize: skip
+				};
+				for (const [type, listener] of Object.entries(listeners)) {
+					addEventListener(type, listener, true);
+				}
+				const end = () => {
+					clearTimeout(fallback);
+					for (const [type, listener] of Object.entries(listeners)) {
+						removeEventListener(type, listener, true);
+					}
+					root.classList.remove('launching', 'leaving');
+					delete window.launchExit;
+					const overlay = document.getElementById('launch');
+					// The HTML may have stopped arriving before the game's wrapper.
+					if (overlay?.nextElementSibling) overlay.nextElementSibling.inert = false;
+					overlay?.remove();
+				};
+				// The game never stays hidden behind the copy if it fails to call launchExit.
+				let fallback = setTimeout(end, 4000);
+				// play(overlay) starts the game's exit and returns its Web Animations.
+				window.launchExit = (play) => {
+					const overlay = document.getElementById('launch');
+					// No way to animate the copy away: the game shows at once.
+					if (!overlay.animate) return end();
+					// Restarted rather than cleared, in case the animations never start or finish.
+					clearTimeout(fallback);
+					fallback = setTimeout(end, 4000);
+					// The copy takes the taps; the keyboard can't reach the game behind it either.
+					overlay.nextElementSibling.inert = true;
+					root.classList.add('leaving');
+					if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+						try {
+							animations = play(overlay);
+						} catch {
+							animations = [];
+						}
+					}
+					if (!animations.length) {
+						animations = [
+							overlay.animate(
+								{ opacity: [1, 0] },
+								{ duration: 200, easing: 'ease-out', fill: 'forwards' }
+							)
+						];
+					}
+					if (tapped) skip();
+					const done = () => {
+						finished = true;
+						close();
+					};
+					Promise.all(animations.map((a) => a.finished)).then(done, done);
+				};
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<!-- The launch screen's copy (maskable icon, static/icons/maskable.svg). Its marks carry
+		     classes so the exit can put them out one by one. -->
+		<div id="launch" aria-hidden="true">
+			<svg id="launch-icon" viewBox="0 0 512 512">
+				<rect class="tile" width="512" height="512" fill="#f7cc0e" />
+				<g transform="translate(111 111) scale(0.8056)">
+					<rect width="360" height="360" rx="54" fill="#141416" />
+					<g stroke="#f2f2f2" stroke-width="12" stroke-linecap="round">
+						<path d="M120 30V330M240 30V330M30 120H330M30 240H330" />
+					</g>
+					<g fill="none" stroke-linecap="round">
+						<path
+							class="mark"
+							stroke="#2ea8ff"
+							stroke-width="19"
+							stroke-linecap="butt"
+							d="M84.76 41.34A31 31 0 0 1 84.76 78.66M78.66 84.76A31 31 0 0 1 41.34 84.76M35.24 78.66A31 31 0 0 1 35.24 41.34M41.34 35.24A31 31 0 0 1 78.66 35.24"
+						/>
+						<path
+							class="mark"
+							stroke="#ff5a2c"
+							stroke-width="21"
+							d="M30 270L90 330M90 270L30 330"
+						/>
+						<path
+							class="mark"
+							stroke="#2ea8ff"
+							stroke-width="19"
+							stroke-linecap="butt"
+							d="M324.76 41.34A31 31 0 0 1 324.76 78.66M318.66 84.76A31 31 0 0 1 281.34 84.76M275.24 78.66A31 31 0 0 1 275.24 41.34M281.34 35.24A31 31 0 0 1 318.66 35.24"
+						/>
+						<path
+							class="mark"
+							stroke="#ff5a2c"
+							stroke-width="21"
+							d="M150 150L210 210M210 150L150 210"
+						/>
+					</g>
+				</g>
+			</svg>
+			<span id="launch-name">Tic-Tac-Toe Bolt</span>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
