@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { adFits, adForScreen, type AdSize } from '$lib/adScreens';
-	import { buyer, playAdIsStale } from '$lib/ads';
+	import { buyer, playAdIsStale, recheckBuyer } from '$lib/ads';
 	import AdSlot from '$lib/components/AdSlot.svelte';
 	import Game from '$lib/components/Game.svelte';
 	import LightSwitch from '$lib/components/LightSwitch.svelte';
@@ -21,7 +21,8 @@
 	// appears, so a browser bar sliding away doesn't swap the box for a new one. A window too small
 	// for the results layout with a box, an offline visit (no ad can be requested), or a buyer of
 	// ad-free gets no box and the plain screen. A saved ad-free token counts as a purchase until the
-	// loader has checked it; if it rejects the token while the win is showing, the box comes then.
+	// loader has checked it; if it rejects the token while the win is showing, the box comes then,
+	// and if it accepts a token saved during the visit, the box goes.
 	let wins = 0;
 	let won: typeof $gameWon | undefined;
 	// The box this win could get, chosen as it appears from the window and the connection then, so
@@ -43,6 +44,9 @@
 					width: innerWidth,
 					height: innerHeight
 				});
+				// Ad-free may have been bought in another tab since the last check, or that check may not
+				// have reached the loader. The verdict changes `$buyer`, which runs this effect again.
+				recheckBuyer();
 			}
 			if (!winner) winSize = null;
 			won = winner;

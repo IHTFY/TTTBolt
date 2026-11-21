@@ -4,13 +4,13 @@
 	import '@fontsource/nunito/latin-800.css';
 	import '../app.css';
 	import { derived } from 'svelte/store';
-	import { loadForBuyer } from '$lib/ads';
+	import { watchBuyer } from '$lib/ads';
 	import { board } from '$lib/stores/gameStore';
 	import { reloadOnUpdate } from '$lib/updates';
 	import { watchMode } from '$lib/theme';
 	let { children } = $props();
 
-	onMount(loadForBuyer);
+	onMount(watchBuyer);
 	onMount(watchMode);
 
 	// Keep the offline copy fresh: look for a new deploy whenever the app comes into view, and
