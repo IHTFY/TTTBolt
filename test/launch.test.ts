@@ -13,7 +13,10 @@ const overlay = html.match(/<div id="launch"[\s\S]*?<\/span>\s*<\/div>/)![0];
 
 type Launch = { app?: boolean; navigation?: string; reducedMotion?: boolean };
 
+// Fake timers throughout, so each test's 4 s fallback runs in its own afterEach and ends that
+// launch (and its listeners) before the next test starts.
 function launch({ app = true, navigation = 'navigate', reducedMotion = false }: Launch = {}) {
+	vi.useFakeTimers();
 	vi.stubGlobal('matchMedia', (query: string) => ({
 		matches: query.includes('display-mode') ? app : query.includes('reduce') && reducedMotion
 	}));
@@ -35,6 +38,7 @@ const copy = () => document.getElementById('launch');
 const game = () => copy()?.nextElementSibling ?? document.body.lastElementChild!;
 
 afterEach(() => {
+	vi.runOnlyPendingTimers();
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
@@ -89,8 +93,31 @@ describe('launch screen', () => {
 		expect(copy()).toBeNull();
 	});
 
+	it('skips at the start of the exit after a tap on the copy before it', () => {
+		launch();
+		copy()!.dispatchEvent(new PointerEvent('pointerdown'));
+		copy()!.dispatchEvent(new MouseEvent('click'));
+		const move = animation();
+		window.launchExit!(() => [move] as unknown as Animation[]);
+		expect(move.finish).toHaveBeenCalled();
+	});
+
+	it('skips to the end when the window turns', () => {
+		launch();
+		const move = animation();
+		window.launchExit!(() => [move] as unknown as Animation[]);
+		window.dispatchEvent(new Event('resize'));
+		expect(move.finish).toHaveBeenCalled();
+	});
+
+	it('shows the game if the page stops arriving before the game', () => {
+		launch();
+		copy()!.nextElementSibling!.remove();
+		expect(() => vi.advanceTimersByTime(4000)).not.toThrow();
+		expect(copy()).toBeNull();
+	});
+
 	it('lets go of a press that ends without a click', () => {
-		vi.useFakeTimers();
 		launch();
 		window.launchExit!(() => [animation()] as unknown as Animation[]);
 		copy()!.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
@@ -129,7 +156,6 @@ describe('launch screen', () => {
 	});
 
 	it('shows the game if the app never calls launchExit', () => {
-		vi.useFakeTimers();
 		launch();
 		vi.advanceTimersByTime(4000);
 		expect(copy()).toBeNull();
@@ -139,7 +165,6 @@ describe('launch screen', () => {
 	});
 
 	it('shows the game if the exit never finishes', () => {
-		vi.useFakeTimers();
 		launch();
 		window.launchExit!(() => [animation()] as unknown as Animation[]);
 		vi.advanceTimersByTime(4000);

@@ -95,12 +95,43 @@
 					return;
 				}
 				root.classList.add('launching');
+				// A tap skips to the end, even one made before the exit starts. The copy stays until that
+				// tap's click has landed on it, so the tap doesn't also play a move on the board below. A
+				// press that ends with no click (a right-click, a drag) lets go shortly after. Turning the
+				// phone moves the board, so it skips to the end too.
+				let animations = [];
+				let tapped = false;
+				let pressed = false;
+				let finished = false;
+				const skip = () => animations.forEach((a) => a.finish());
+				const close = () => finished && !pressed && end();
+				const release = () => {
+					pressed = false;
+					close();
+				};
+				const listeners = {
+					pointerdown: () => {
+						tapped = pressed = true;
+						skip();
+					},
+					pointerup: () => setTimeout(release, 400),
+					click: release,
+					pointercancel: release,
+					resize: skip
+				};
+				for (const [type, listener] of Object.entries(listeners)) {
+					addEventListener(type, listener, true);
+				}
 				const end = () => {
 					clearTimeout(fallback);
+					for (const [type, listener] of Object.entries(listeners)) {
+						removeEventListener(type, listener, true);
+					}
 					root.classList.remove('launching', 'leaving');
 					delete window.launchExit;
 					const overlay = document.getElementById('launch');
-					if (overlay) overlay.nextElementSibling.inert = false;
+					// The HTML may have stopped arriving before the game's wrapper.
+					if (overlay?.nextElementSibling) overlay.nextElementSibling.inert = false;
 					overlay?.remove();
 				};
 				// The game never stays hidden behind the copy if it fails to call launchExit.
@@ -116,7 +147,6 @@
 					// The copy takes the taps; the keyboard can't reach the game behind it either.
 					overlay.nextElementSibling.inert = true;
 					root.classList.add('leaving');
-					let animations = [];
 					if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
 						try {
 							animations = play(overlay);
@@ -132,27 +162,7 @@
 							)
 						];
 					}
-					// A tap skips to the end. The copy stays until that tap's click has landed on it, so the
-					// tap doesn't also play a move on the board below. A press that ends with no click (a
-					// right-click, a drag) lets go shortly after.
-					let pressed = false;
-					let finished = false;
-					const close = () => finished && !pressed && end();
-					const release = () => {
-						pressed = false;
-						close();
-					};
-					overlay.addEventListener(
-						'pointerdown',
-						() => {
-							pressed = true;
-							animations.forEach((a) => a.finish());
-						},
-						{ once: true }
-					);
-					overlay.addEventListener('pointerup', () => setTimeout(release, 400));
-					overlay.addEventListener('click', release);
-					overlay.addEventListener('pointercancel', release);
+					if (tapped) skip();
 					const done = () => {
 						finished = true;
 						close();
