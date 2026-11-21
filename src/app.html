@@ -94,16 +94,22 @@
 				const end = () => {
 					clearTimeout(fallback);
 					root.classList.remove('launching');
-					document.getElementById('launch')?.remove();
+					const overlay = document.getElementById('launch');
+					if (overlay) overlay.nextElementSibling.inert = false;
+					overlay?.remove();
 				};
 				// The game never stays hidden behind the copy if it fails to call launchExit.
-				const fallback = setTimeout(end, 4000);
+				let fallback = setTimeout(end, 4000);
 				// play(overlay) starts the game's exit and returns its Web Animations.
 				window.launchExit = (play) => {
-					clearTimeout(fallback);
 					const overlay = document.getElementById('launch');
 					// Too late: the fallback already removed the copy.
 					if (!overlay) return;
+					// Restarted rather than cleared, in case the animations never start or finish.
+					clearTimeout(fallback);
+					fallback = setTimeout(end, 4000);
+					// The copy takes the taps; the keyboard can't reach the game behind it either.
+					overlay.nextElementSibling.inert = true;
 					let animations = [];
 					if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
 						try {
@@ -120,10 +126,30 @@
 							)
 						];
 					}
-					overlay.addEventListener('pointerdown', () => animations.forEach((a) => a.finish()), {
-						once: true
-					});
-					Promise.all(animations.map((a) => a.finished)).then(end, end);
+					// A tap skips to the end. The copy stays until that tap's click has landed on it, so the
+					// tap doesn't also play a move on the board below.
+					let pressed = false;
+					let finished = false;
+					const close = () => finished && !pressed && end();
+					overlay.addEventListener(
+						'pointerdown',
+						() => {
+							pressed = true;
+							animations.forEach((a) => a.finish());
+						},
+						{ once: true }
+					);
+					for (const type of ['click', 'pointercancel']) {
+						overlay.addEventListener(type, () => {
+							pressed = false;
+							close();
+						});
+					}
+					const done = () => {
+						finished = true;
+						close();
+					};
+					Promise.all(animations.map((a) => a.finished)).then(done, done);
 				};
 			})();
 		</script>

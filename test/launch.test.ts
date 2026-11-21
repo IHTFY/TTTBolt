@@ -1,0 +1,122 @@
+// @vitest-environment happy-dom
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// The launch screen's copy and its script run from src/app.html before the app loads, so the test
+// runs them the same way: the overlay markup into the body, then the inline script.
+const html = readFileSync(resolve(__dirname, '../src/app.html'), 'utf8');
+const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+	.map((match) => match[1])
+	.find((code) => code.includes('launchExit'))!;
+const overlay = html.match(/<div id="launch"[\s\S]*?<\/span>\s*<\/div>/)![0];
+
+type Launch = { app?: boolean; navigation?: string; reducedMotion?: boolean };
+
+function launch({ app = true, navigation = 'navigate', reducedMotion = false }: Launch = {}) {
+	vi.stubGlobal('matchMedia', (query: string) => ({
+		matches: query.includes('display-mode') ? app : query.includes('reduce') && reducedMotion
+	}));
+	vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+		{ type: navigation } as unknown as PerformanceEntry
+	]);
+	document.body.innerHTML = `${overlay}<div style="display: contents"><main></main></div>`;
+	new Function(script)();
+}
+
+function animation() {
+	let finish = () => {};
+	const finished = new Promise<void>((resolve) => (finish = resolve));
+	return { finished, finish: vi.fn(() => finish()) };
+}
+
+const root = document.documentElement;
+const copy = () => document.getElementById('launch');
+const game = () => copy()?.nextElementSibling ?? document.body.lastElementChild!;
+
+afterEach(() => {
+	vi.useRealTimers();
+	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
+	sessionStorage.clear();
+	root.classList.remove('launching');
+	delete window.launchExit;
+	document.body.innerHTML = '';
+});
+
+describe('launch screen', () => {
+	it('stays off in a browser tab', () => {
+		launch({ app: false });
+		expect(root.classList.contains('launching')).toBe(false);
+		expect(window.launchExit).toBeUndefined();
+	});
+
+	it('stays off on a reload of the installed app', () => {
+		launch({ navigation: 'reload' });
+		expect(root.classList.contains('launching')).toBe(false);
+	});
+
+	it('plays once per session', () => {
+		launch();
+		expect(root.classList.contains('launching')).toBe(true);
+		root.classList.remove('launching');
+		launch();
+		expect(root.classList.contains('launching')).toBe(false);
+	});
+
+	it('gives way to the game when the exit finishes', async () => {
+		launch();
+		const moves = [animation(), animation()];
+		window.launchExit!(() => moves as unknown as Animation[]);
+		expect((game() as HTMLElement).inert).toBe(true);
+		moves.forEach((move) => move.finish());
+		await vi.waitFor(() => expect(copy()).toBeNull());
+		expect(root.classList.contains('launching')).toBe(false);
+		expect((game() as HTMLElement).inert).toBe(false);
+	});
+
+	it('skips to the end on a tap, and keeps that tap off the board', async () => {
+		launch();
+		const moves = [animation(), animation()];
+		window.launchExit!(() => moves as unknown as Animation[]);
+		copy()!.dispatchEvent(new PointerEvent('pointerdown'));
+		for (const move of moves) expect(move.finish).toHaveBeenCalled();
+		await Promise.all(moves.map((move) => move.finished));
+		await Promise.resolve();
+		// The tap's click hasn't landed yet, so the copy is still there to take it.
+		expect(copy()).not.toBeNull();
+		copy()!.dispatchEvent(new MouseEvent('click'));
+		expect(copy()).toBeNull();
+	});
+
+	it('fades for 200 ms with reduced motion', () => {
+		launch({ reducedMotion: true });
+		const fade = animation();
+		const animate = vi.fn(() => fade);
+		copy()!.animate = animate as unknown as HTMLElement['animate'];
+		const play = vi.fn();
+		window.launchExit!(play);
+		expect(play).not.toHaveBeenCalled();
+		expect(animate).toHaveBeenCalledWith(
+			{ opacity: [1, 0] },
+			expect.objectContaining({ duration: 200 })
+		);
+	});
+
+	it('shows the game if the app never calls launchExit', () => {
+		vi.useFakeTimers();
+		launch();
+		vi.advanceTimersByTime(4000);
+		expect(copy()).toBeNull();
+		expect(root.classList.contains('launching')).toBe(false);
+	});
+
+	it('shows the game if the exit never finishes', () => {
+		vi.useFakeTimers();
+		launch();
+		window.launchExit!(() => [animation()] as unknown as Animation[]);
+		vi.advanceTimersByTime(4000);
+		expect(copy()).toBeNull();
+		expect((game() as HTMLElement).inert).toBe(false);
+	});
+});
