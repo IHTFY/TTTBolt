@@ -11,6 +11,7 @@ afterEach(() => {
 	unmountPage?.();
 	unmountPage = undefined;
 	vi.restoreAllMocks();
+	vi.unstubAllGlobals();
 	// @ts-expect-error reset between tests
 	delete window.ihtfyAds;
 	localStorage.clear();
@@ -130,6 +131,51 @@ describe('results screen ad', () => {
 		await page.verdict(false);
 		vi.unstubAllGlobals();
 		expect(document.querySelector(RESULTS_BOX)).not.toBeNull();
+	});
+
+	it('gives each win its own ad key and a box of the size chosen at that win', async () => {
+		vi.stubGlobal('innerWidth', 390);
+		vi.stubGlobal('innerHeight', 844);
+		const page = await openPage({ token: false });
+		page.win();
+		const first = document.querySelector<HTMLElement>(RESULTS_BOX)!;
+		expect(first.dataset.adSize).toBe('300x250');
+		expect(first.style.height).toBe('250px');
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		document.querySelector<HTMLButtonElement>('.again')!.click();
+		await tick();
+		// The window shrinks between the two games, so the second win gets a smaller box.
+		vi.stubGlobal('innerHeight', 500);
+		window.dispatchEvent(new Event('resize'));
+		page.win();
+		await tick();
+		const second = document.querySelector<HTMLElement>(RESULTS_BOX)!;
+		expect(vi.mocked(window.ihtfyAds.show).mock.calls).toEqual([
+			[first, 'win-1'],
+			[second, 'win-2']
+		]);
+		expect(second).not.toBe(first);
+		expect(second.dataset.adSize).toBe('320x50');
+		expect(second.style.width).toBe('320px');
+		expect(second.style.height).toBe('50px');
+	});
+
+	it('keeps the More games link off the win screen, with and without a results ad', async () => {
+		const linkNames = (within: string) =>
+			[...document.querySelectorAll(`${within} .links a`)].map((a) => a.textContent);
+		const page = await openPage({ token: false });
+		expect(linkNames('.pinned')).toEqual(['More games', 'Privacy']);
+		page.win();
+		expect(document.querySelector(RESULTS_BOX)).not.toBeNull();
+		expect(linkNames('main')).toEqual(['Privacy']);
+		document.querySelector<HTMLButtonElement>('.again')!.click();
+		await tick();
+		expect(linkNames('.pinned')).toEqual(['More games', 'Privacy']);
+		page.goOffline();
+		page.win();
+		expect(document.querySelector(RESULTS_BOX)).toBeNull();
+		expect(linkNames('main')).toEqual(['Privacy']);
 	});
 
 	it('moves keyboard focus to the first cell of the new board after Play again', async () => {

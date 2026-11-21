@@ -22,12 +22,15 @@
 	// for the results layout with a box, an offline visit (no ad can be requested), or a buyer of
 	// ad-free gets no box and the plain screen. A saved ad-free token counts as a purchase until the
 	// loader has checked it; if it rejects the token while the win is showing, the box comes then.
-	let wins = $state(0);
-	let adSize = $state<AdSize | null>(null);
+	let wins = 0;
 	let won: typeof $gameWon | undefined;
 	// The box this win could get, chosen as it appears from the window and the connection then, so
 	// reconnecting, going offline or turning the phone before the loader answers doesn't change it.
+	// A new game clears it.
 	let winSize: AdSize | null = null;
+	// The box this win has, with the key its ad is asked for under. The two are set together and
+	// cleared with the win, so the next win's box never starts out with this one's key or size.
+	let box = $state<{ key: string; size: AdSize } | null>(null);
 	$effect(() => {
 		const winner = $gameWon;
 		const isBuyer = $buyer;
@@ -41,19 +44,21 @@
 					height: innerHeight
 				});
 			}
+			if (!winner) winSize = null;
 			won = winner;
 			// A box needs a connection when it is added, since no ad can be requested offline.
-			if (winner && wins > 0) adSize = isBuyer || !navigator.onLine ? null : winSize;
+			box = winSize && !isBuyer && navigator.onLine ? { key: `win-${wins}`, size: winSize } : null;
 		});
 	});
-	const adKey = $derived($gameWon && wins > 0 && adSize ? `win-${wins}` : '');
+	// The results layout goes as soon as the board resets, before the effect above has run.
+	const ad = $derived($gameWon ? box : null);
 
 	// The ad on screen stays as it is, and a new one is never asked for because the window changed. If
 	// the window turns too small for that box (a phone on its side), the box is hidden, label and all,
 	// so it neither breaks the layout nor covers the board; it comes back if the window grows again.
 	let innerWidth = $state(0);
 	let innerHeight = $state(0);
-	const adFitsNow = $derived(adSize ? adFits(adSize, innerWidth, innerHeight) : false);
+	const adFitsNow = $derived(ad ? adFits(ad.size, innerWidth, innerHeight) : false);
 
 	// A new game, when the board empties, gets a new ad beside it, unless the last one is under a
 	// minute old: games can be that quick.
@@ -72,7 +77,7 @@
 	<title>Tic-Tac-Toe Bolt</title>
 </svelte:head>
 
-<main class:scrolls={adKey}>
+<main class:scrolls={ad}>
 	<!-- decorative swooshes, as on the box art -->
 	<svg class="swoosh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
 		<path d="M-10 78 C 20 60, 45 95, 70 72 S 105 40, 115 55" />
@@ -88,7 +93,7 @@
 				<h1>Infinite Tic-Tac-Toe</h1>
 				<p class="status" aria-live="polite">
 					{#if $gameWon}
-						<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins!{adKey
+						<span class={$gameWon}>{$gameWon.toUpperCase()}</span> wins!{ad
 							? ''
 							: ' Press the reset button to play again'}
 					{:else}
@@ -105,24 +110,28 @@
 			</div>
 		</div>
 
-		<PlayAd game={playAd} hidden={!!adKey} />
+		<PlayAd game={playAd} hidden={!!ad} />
 	</div>
 
+	<!-- More games belongs to the play screen's footer; a win screen, with an ad or without, links
+	     only Privacy. -->
 	{#snippet links()}
 		<nav class="links">
-			<a href="https://ihtfy.com/projects/" target="_blank" rel="noopener">More games</a>
+			{#if !$gameWon}
+				<a href="https://ihtfy.com/projects/" target="_blank" rel="noopener">More games</a>
+			{/if}
 			<a href="https://ihtfy.com/privacy/" target="_blank" rel="noopener">Privacy</a>
 		</nav>
 	{/snippet}
 
-	{#if adKey && adSize}
+	{#if ad}
 		<!-- Everything to press comes before the ad, so no control sits beside it or past it. -->
 		<div class="results">
 			<div class="controls">
 				<button class="again" onclick={playAgain}>Play again</button>
 				<LightSwitch inline />
 			</div>
-			<AdSlot {adKey} size={adSize} {links} hidden={!adFitsNow} />
+			<AdSlot adKey={ad.key} size={ad.size} {links} hidden={!adFitsNow} />
 		</div>
 	{:else}
 		<LightSwitch />
