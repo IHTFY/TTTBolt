@@ -130,6 +130,23 @@ describe('launch screen', () => {
 		expect(copy()).toBeNull();
 	});
 
+	it("keeps taps and keys from the page's own listeners until the copy is gone", async () => {
+		launch();
+		const heard = vi.fn();
+		for (const type of ['pointerdown', 'keydown', 'resize']) addEventListener(type, heard, true);
+		window.launchExit!(() => [animation()] as unknown as Animation[]);
+		copy()!.dispatchEvent(new KeyboardEvent('keydown'));
+		copy()!.dispatchEvent(new PointerEvent('pointerdown'));
+		window.dispatchEvent(new Event('resize'));
+		expect(heard.mock.calls.map(([event]) => event.type)).toEqual(['resize']);
+		copy()!.dispatchEvent(new PointerEvent('pointerup'));
+		await vi.advanceTimersByTimeAsync(400);
+		expect(copy()).toBeNull();
+		document.body.dispatchEvent(new PointerEvent('pointerdown'));
+		expect(heard).toHaveBeenCalledTimes(2);
+		for (const type of ['pointerdown', 'keydown', 'resize']) removeEventListener(type, heard, true);
+	});
+
 	it('lets go of a press that ends without a click', () => {
 		launch();
 		window.launchExit!(() => [animation()] as unknown as Animation[]);

@@ -110,16 +110,30 @@
 					pressed = false;
 					close();
 				};
+				// Taps and keys during the launch are the copy's alone. Nothing registered after this sees
+				// them, such as the side ad's wait for the player's first tap or key.
+				const own = (event) => event.stopImmediatePropagation();
 				const listeners = {
-					pointerdown: () => {
+					pointerdown: (event) => {
+						own(event);
 						// A new press keeps the copy up, whatever an earlier press left pending.
 						clearTimeout(letGo);
 						tapped = pressed = true;
 						skip();
 					},
-					pointerup: () => (letGo = setTimeout(release, 400)),
-					click: release,
-					pointercancel: release,
+					pointerup: (event) => {
+						own(event);
+						letGo = setTimeout(release, 400);
+					},
+					click: (event) => {
+						own(event);
+						release();
+					},
+					pointercancel: (event) => {
+						own(event);
+						release();
+					},
+					keydown: own,
 					resize: skip
 				};
 				for (const [type, listener] of Object.entries(listeners)) {
