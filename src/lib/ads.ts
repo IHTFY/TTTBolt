@@ -56,26 +56,68 @@ export function mayBeAdFree() {
  */
 export const buyer = writable(mayBeAdFree());
 
-/**
- * Loads the loader now if this browser holds an ad-free token, so it can hide every ad box, and
- * takes its verdict on the token. If the loader can't be reached, the token stays the hint until
- * the browser is back online, when the check is tried again.
- */
-export function loadForBuyer() {
+// A token check that would have to ask for the loader again, because the loader isn't on the page,
+// does so at most this many times a visit when a win or a return to the page starts it. A loader
+// that stays blocked would otherwise be asked for at every win.
+const MAX_RECHECK_REQUESTS = 3;
+let recheckRequests = 0;
+
+// Once the loader has accepted a token it hides every ad box for the rest of the visit, whatever
+// happens to the token, so the buyer layout stays as well and the checks stop.
+let accepted = false;
+
+function check(recheck: boolean) {
+	if (accepted) return;
 	if (!mayBeAdFree()) {
-		// The token is gone (a cookie that expired while the check waited): nothing to hold the buyer layout.
+		// No token, or it has gone (a cookie that expired while a check waited): nothing to hold the
+		// buyer layout.
 		document.documentElement.classList.remove('ad-free');
 		buyer.set(false);
 		return;
 	}
+	if (recheck && !loader) {
+		if (recheckRequests === MAX_RECHECK_REQUESTS) return;
+		recheckRequests++;
+	}
 	load()
 		.then(() => window.ihtfyAds.adFree())
 		.then((free) => {
-			// The class app.html set from the hint comes off when the loader rejects the token.
-			if (!free) document.documentElement.classList.remove('ad-free');
+			// The class app.html set from the hint comes off when the loader rejects the token, and goes
+			// on for a purchase made during the visit, so the ad beside the board leaves with its label.
+			accepted = free;
+			document.documentElement.classList.toggle('ad-free', free);
 			buyer.set(free);
 		})
 		.catch(() => addEventListener('online', loadForBuyer, { once: true }));
+}
+
+/**
+ * Loads the loader now if this browser holds an ad-free token, so it can hide every ad box, and
+ * takes its verdict on the token. If the loader can't be reached, the token stays the hint until
+ * the browser is back online, the page comes back into view, or the next win, when the check is
+ * tried again.
+ */
+export const loadForBuyer = () => check(false);
+
+/**
+ * Checks the token again, for a win or a return to the page: ad-free can be bought in another tab
+ * during the visit, and an earlier check may not have reached the loader. Only the loader's verdict
+ * changes the layout here; a token it hasn't judged yet doesn't count as a purchase, so a token it
+ * goes on to reject never takes the ads away and brings them back.
+ */
+export const recheckBuyer = () => check(true);
+
+/**
+ * Checks a saved token at startup and each time the page comes back into view. Returns a function
+ * that stops watching.
+ */
+export function watchBuyer() {
+	loadForBuyer();
+	const onVisible = () => {
+		if (document.visibilityState === 'visible') recheckBuyer();
+	};
+	document.addEventListener('visibilitychange', onVisible);
+	return () => document.removeEventListener('visibilitychange', onVisible);
 }
 
 /** Fills `box` with an ad for the win or game named `key`; offline or on failure it stays empty. */

@@ -171,6 +171,139 @@ describe("the loader's verdict on a saved token", () => {
 	});
 });
 
+describe('checking the token again during the visit', () => {
+	const tick = () => new Promise((resolve) => setTimeout(resolve));
+	let stopWatching: (() => void) | undefined;
+
+	async function watch(adFree: () => Promise<boolean>) {
+		window.ihtfyAds = { show: vi.fn(), adFree };
+		const ads = await loadAds();
+		const { get } = await import('svelte/store');
+		stopWatching = ads.watchBuyer();
+		return { ...ads, buyerNow: () => get(ads.buyer) };
+	}
+
+	afterEach(() => {
+		stopWatching?.();
+		stopWatching = undefined;
+		document.documentElement.classList.remove('ad-free');
+		// Lets a check still waiting for the browser to come back online fire now, so it can't leak into the next test.
+		window.dispatchEvent(new Event('online'));
+	});
+
+	it('takes the verdict on a token saved during the visit when the page comes back into view', async () => {
+		const { buyerNow } = await watch(() => Promise.resolve(true));
+		expect(added).toHaveLength(0);
+		document.cookie = 'ihtfy-ad-free=token';
+		document.dispatchEvent(new Event('visibilitychange'));
+		expect(added).toHaveLength(1);
+		// The new token is no purchase until the loader has judged it.
+		expect(buyerNow()).toBe(false);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+	});
+
+	it('keeps the ordinary layout when the loader rejects a token saved during the visit', async () => {
+		const { buyerNow } = await watch(() => Promise.resolve(false));
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		document.dispatchEvent(new Event('visibilitychange'));
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(false);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
+	});
+
+	it('does not check when the page goes out of view', async () => {
+		await watch(() => Promise.resolve(true));
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+		document.dispatchEvent(new Event('visibilitychange'));
+		expect(added).toHaveLength(0);
+	});
+
+	it('stops checking once told to stop watching', async () => {
+		await watch(() => Promise.resolve(true));
+		stopWatching!();
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		document.dispatchEvent(new Event('visibilitychange'));
+		expect(added).toHaveLength(0);
+	});
+
+	it('drops the buyer layout when an unchecked token is gone as the page comes back into view', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		const { buyerNow } = await watch(() => new Promise(() => {}));
+		document.documentElement.classList.add('ad-free');
+		expect(buyerNow()).toBe(true);
+		localStorage.clear();
+		document.dispatchEvent(new Event('visibilitychange'));
+		expect(buyerNow()).toBe(false);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(false);
+	});
+
+	it('keeps the buyer layout for the rest of the visit once the loader has accepted a token', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		const adFree = vi.fn().mockResolvedValue(true);
+		const { buyerNow, recheckBuyer } = await watch(adFree);
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		// The loader goes on hiding every ad box even if the token is cleared, so the layout must not ask for one.
+		localStorage.clear();
+		document.dispatchEvent(new Event('visibilitychange'));
+		recheckBuyer();
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+		expect(adFree).toHaveBeenCalledTimes(1);
+	});
+
+	it('asks for a loader that failed to load again, without waiting for an online event', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		const { buyerNow, recheckBuyer } = await watch(() => Promise.resolve(false));
+		added[0].dispatchEvent(new Event('error'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		recheckBuyer();
+		expect(added).toHaveLength(2);
+		added[1].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(false);
+	});
+
+	it('asks a loader that is still on its way only once', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		const { recheckBuyer } = await watch(() => Promise.resolve(true));
+		recheckBuyer();
+		recheckBuyer();
+		expect(added).toHaveLength(1);
+	});
+
+	it('stops asking for a loader that stays blocked after three more tries, until the browser is back online', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		const { buyerNow, recheckBuyer } = await watch(() => Promise.resolve(false));
+		for (let tries = 1; tries <= 3; tries++) {
+			added.at(-1)!.dispatchEvent(new Event('error'));
+			await tick();
+			recheckBuyer();
+			expect(added).toHaveLength(1 + tries);
+		}
+		added.at(-1)!.dispatchEvent(new Event('error'));
+		await tick();
+		recheckBuyer();
+		document.dispatchEvent(new Event('visibilitychange'));
+		expect(added).toHaveLength(4);
+		expect(buyerNow()).toBe(true);
+		window.dispatchEvent(new Event('online'));
+		expect(added).toHaveLength(5);
+		added[4].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(false);
+	});
+});
+
 describe('mayBeAdFree', () => {
 	it('is false without a token and true with one in localStorage or the cookie', async () => {
 		const { mayBeAdFree } = await loadAds();
