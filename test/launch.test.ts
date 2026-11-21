@@ -117,6 +117,19 @@ describe('launch screen', () => {
 		expect(copy()).toBeNull();
 	});
 
+	it('keeps the copy up for a second press held after a quick first one', async () => {
+		launch();
+		window.launchExit!(() => [animation()] as unknown as Animation[]);
+		copy()!.dispatchEvent(new PointerEvent('pointerdown'));
+		copy()!.dispatchEvent(new PointerEvent('pointerup'));
+		copy()!.dispatchEvent(new MouseEvent('click'));
+		copy()!.dispatchEvent(new PointerEvent('pointerdown'));
+		await vi.advanceTimersByTimeAsync(400);
+		expect(copy()).not.toBeNull();
+		copy()!.dispatchEvent(new MouseEvent('click'));
+		expect(copy()).toBeNull();
+	});
+
 	it('lets go of a press that ends without a click', () => {
 		launch();
 		window.launchExit!(() => [animation()] as unknown as Animation[]);

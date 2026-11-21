@@ -103,6 +103,7 @@
 				let tapped = false;
 				let pressed = false;
 				let finished = false;
+				let letGo;
 				const skip = () => animations.forEach((a) => a.finish());
 				const close = () => finished && !pressed && end();
 				const release = () => {
@@ -111,10 +112,12 @@
 				};
 				const listeners = {
 					pointerdown: () => {
+						// A new press keeps the copy up, whatever an earlier press left pending.
+						clearTimeout(letGo);
 						tapped = pressed = true;
 						skip();
 					},
-					pointerup: () => setTimeout(release, 400),
+					pointerup: () => (letGo = setTimeout(release, 400)),
 					click: release,
 					pointercancel: release,
 					resize: skip
