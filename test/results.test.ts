@@ -11,6 +11,7 @@ afterEach(() => {
 	unmountPage?.();
 	unmountPage = undefined;
 	vi.restoreAllMocks();
+	vi.unstubAllGlobals();
 	// @ts-expect-error reset between tests
 	delete window.ihtfyAds;
 	localStorage.clear();
@@ -158,7 +159,6 @@ describe('results screen ad', () => {
 		expect(second.dataset.adSize).toBe('320x50');
 		expect(second.style.width).toBe('320px');
 		expect(second.style.height).toBe('50px');
-		vi.unstubAllGlobals();
 	});
 
 	it('keeps the More games link off the win screen, with and without a results ad', async () => {
