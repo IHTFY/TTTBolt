@@ -295,6 +295,28 @@ describe('checking the token again during the visit', () => {
 		box.remove();
 	});
 
+	it('takes the verdict on a token saved while the loader for an ad was on its way', async () => {
+		const { buyerNow, showAd } = await watch(() => Promise.resolve(true));
+		const box = document.createElement('div');
+		document.body.append(box);
+		showAd(box, 'win-1');
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		box.remove();
+	});
+
+	it('stops waiting for the browser to come back online once told to stop watching', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		await watch(() => Promise.resolve(false));
+		added[0].dispatchEvent(new Event('error'));
+		await tick();
+		stopWatching!();
+		window.dispatchEvent(new Event('online'));
+		expect(added).toHaveLength(1);
+	});
+
 	it('keeps an accepted purchase when a slower check of an older token answers after it', async () => {
 		localStorage.setItem('ihtfy-ad-free', 'old');
 		const answers: ((free: boolean) => void)[] = [];

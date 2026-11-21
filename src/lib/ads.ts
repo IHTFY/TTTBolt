@@ -119,19 +119,25 @@ export function watchBuyer() {
 		if (document.visibilityState === 'visible') recheckBuyer();
 	};
 	document.addEventListener('visibilitychange', onVisible);
-	return () => document.removeEventListener('visibilitychange', onVisible);
+	return () => {
+		document.removeEventListener('visibilitychange', onVisible);
+		removeEventListener('online', loadForBuyer);
+	};
 }
 
 /** Fills `box` with an ad for the win or game named `key`; offline or on failure it stays empty. */
 export function showAd(box: HTMLElement, key: string) {
 	if (!navigator.onLine) return;
 	load().then(
-		() => box.isConnected && window.ihtfyAds.show(box, key),
+		() => {
+			if (box.isConnected) window.ihtfyAds.show(box, key);
+			// The loader that fills the box also hides it for a buyer, so its verdict on the token saved
+			// by now is taken with every ad, even after the checks for a win or a return have stopped
+			// asking for the loader.
+			recheckBuyer();
+		},
 		() => {}
 	);
-	// The loader that fills the box also hides it for a buyer, so its verdict on a saved token is
-	// taken with every ad, even after the checks for a win or a return have stopped asking for it.
-	recheckBuyer();
 }
 
 // The player's first tap or key press, which the ad beside the board waits for
