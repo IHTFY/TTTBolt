@@ -63,6 +63,10 @@
 				place-items: center;
 				background: #2e9fe0;
 			}
+			/* Until the exit starts, the page behind the copy can't take focus or keys. */
+			.launching:not(.leaving) #launch + div {
+				visibility: hidden;
+			}
 			#launch-icon {
 				width: 128px;
 				height: 128px;
@@ -93,7 +97,8 @@
 				root.classList.add('launching');
 				const end = () => {
 					clearTimeout(fallback);
-					root.classList.remove('launching');
+					root.classList.remove('launching', 'leaving');
+					delete window.launchExit;
 					const overlay = document.getElementById('launch');
 					if (overlay) overlay.nextElementSibling.inert = false;
 					overlay?.remove();
@@ -103,13 +108,14 @@
 				// play(overlay) starts the game's exit and returns its Web Animations.
 				window.launchExit = (play) => {
 					const overlay = document.getElementById('launch');
-					// Too late: the fallback already removed the copy.
-					if (!overlay) return;
+					// No way to animate the copy away: the game shows at once.
+					if (!overlay.animate) return end();
 					// Restarted rather than cleared, in case the animations never start or finish.
 					clearTimeout(fallback);
 					fallback = setTimeout(end, 4000);
 					// The copy takes the taps; the keyboard can't reach the game behind it either.
 					overlay.nextElementSibling.inert = true;
+					root.classList.add('leaving');
 					let animations = [];
 					if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
 						try {
@@ -127,10 +133,15 @@
 						];
 					}
 					// A tap skips to the end. The copy stays until that tap's click has landed on it, so the
-					// tap doesn't also play a move on the board below.
+					// tap doesn't also play a move on the board below. A press that ends with no click (a
+					// right-click, a drag) lets go shortly after.
 					let pressed = false;
 					let finished = false;
 					const close = () => finished && !pressed && end();
+					const release = () => {
+						pressed = false;
+						close();
+					};
 					overlay.addEventListener(
 						'pointerdown',
 						() => {
@@ -139,12 +150,9 @@
 						},
 						{ once: true }
 					);
-					for (const type of ['click', 'pointercancel']) {
-						overlay.addEventListener(type, () => {
-							pressed = false;
-							close();
-						});
-					}
+					overlay.addEventListener('pointerup', () => setTimeout(release, 400));
+					overlay.addEventListener('click', release);
+					overlay.addEventListener('pointercancel', release);
 					const done = () => {
 						finished = true;
 						close();

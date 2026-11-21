@@ -39,7 +39,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
 	sessionStorage.clear();
-	root.classList.remove('launching');
+	root.classList.remove('launching', 'leaving');
 	delete window.launchExit;
 	document.body.innerHTML = '';
 });
@@ -89,6 +89,31 @@ describe('launch screen', () => {
 		expect(copy()).toBeNull();
 	});
 
+	it('lets go of a press that ends without a click', () => {
+		vi.useFakeTimers();
+		launch();
+		window.launchExit!(() => [animation()] as unknown as Animation[]);
+		copy()!.dispatchEvent(new PointerEvent('pointerdown', { button: 2 }));
+		copy()!.dispatchEvent(new PointerEvent('pointerup', { button: 2 }));
+		return vi.advanceTimersByTimeAsync(400).then(() => expect(copy()).toBeNull());
+	});
+
+	it('keeps the page behind out of reach until the exit starts', () => {
+		launch();
+		expect(root.classList.contains('leaving')).toBe(false);
+		window.launchExit!(() => [animation()] as unknown as Animation[]);
+		expect(root.classList.contains('leaving')).toBe(true);
+		expect((game() as HTMLElement).inert).toBe(true);
+	});
+
+	it('shows the game at once without Web Animations', () => {
+		launch();
+		copy()!.animate = undefined as unknown as HTMLElement['animate'];
+		window.launchExit!(() => []);
+		expect(copy()).toBeNull();
+		expect(root.classList.contains('launching')).toBe(false);
+	});
+
 	it('fades for 200 ms with reduced motion', () => {
 		launch({ reducedMotion: true });
 		const fade = animation();
@@ -109,6 +134,8 @@ describe('launch screen', () => {
 		vi.advanceTimersByTime(4000);
 		expect(copy()).toBeNull();
 		expect(root.classList.contains('launching')).toBe(false);
+		// A game that mounts later has nothing to start.
+		expect(window.launchExit).toBeUndefined();
 	});
 
 	it('shows the game if the exit never finishes', () => {
