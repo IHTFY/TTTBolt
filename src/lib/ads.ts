@@ -82,6 +82,8 @@ function check(recheck: boolean) {
 	load()
 		.then(() => window.ihtfyAds.adFree())
 		.then((free) => {
+			// A slower check of an older token must not undo a purchase accepted since it began.
+			if (accepted) return;
 			// The class app.html set from the hint comes off when the loader rejects the token, and goes
 			// on for a purchase made during the visit, so the ad beside the board leaves with its label.
 			accepted = free;
@@ -127,6 +129,9 @@ export function showAd(box: HTMLElement, key: string) {
 		() => box.isConnected && window.ihtfyAds.show(box, key),
 		() => {}
 	);
+	// The loader that fills the box also hides it for a buyer, so its verdict on a saved token is
+	// taken with every ad, even after the checks for a win or a return have stopped asking for it.
+	recheckBuyer();
 }
 
 // The player's first tap or key press, which the ad beside the board waits for

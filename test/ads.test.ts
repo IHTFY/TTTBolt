@@ -273,6 +273,47 @@ describe('checking the token again during the visit', () => {
 		expect(buyerNow()).toBe(false);
 	});
 
+	it('takes the verdict from a loader that an ad asked for after the limit was reached', async () => {
+		const { buyerNow, recheckBuyer, showAd } = await watch(() => Promise.resolve(true));
+		// Bought during the visit, with the loader blocked at each of the three tries.
+		localStorage.setItem('ihtfy-ad-free', 'token');
+		for (let tries = 1; tries <= 3; tries++) {
+			recheckBuyer();
+			added.at(-1)!.dispatchEvent(new Event('error'));
+			await tick();
+		}
+		recheckBuyer();
+		expect(added).toHaveLength(3);
+		const box = document.createElement('div');
+		document.body.append(box);
+		showAd(box, 'win-1');
+		expect(added).toHaveLength(4);
+		added[3].dispatchEvent(new Event('load'));
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+		box.remove();
+	});
+
+	it('keeps an accepted purchase when a slower check of an older token answers after it', async () => {
+		localStorage.setItem('ihtfy-ad-free', 'old');
+		const answers: ((free: boolean) => void)[] = [];
+		const { buyerNow, recheckBuyer } = await watch(
+			() => new Promise<boolean>((resolve) => answers.push(resolve))
+		);
+		added[0].dispatchEvent(new Event('load'));
+		await tick();
+		recheckBuyer();
+		await tick();
+		expect(answers).toHaveLength(2);
+		answers[1](true);
+		await tick();
+		answers[0](false);
+		await tick();
+		expect(buyerNow()).toBe(true);
+		expect(document.documentElement.classList.contains('ad-free')).toBe(true);
+	});
+
 	it('asks a loader that is still on its way only once', async () => {
 		localStorage.setItem('ihtfy-ad-free', 'token');
 		const { recheckBuyer } = await watch(() => Promise.resolve(true));
