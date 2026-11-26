@@ -106,8 +106,18 @@ describe('launch screen', () => {
 		launch();
 		const move = animation();
 		window.launchExit!(() => [move] as unknown as Animation[]);
+		vi.stubGlobal('innerWidth', window.innerHeight);
+		vi.stubGlobal('innerHeight', window.innerWidth);
 		window.dispatchEvent(new Event('resize'));
 		expect(move.finish).toHaveBeenCalled();
+	});
+
+	it('keeps playing when a resize reports the same size', () => {
+		launch();
+		const move = animation();
+		window.launchExit!(() => [move] as unknown as Animation[]);
+		window.dispatchEvent(new Event('resize'));
+		expect(move.finish).not.toHaveBeenCalled();
 	});
 
 	it('shows the game if the page stops arriving before the game', () => {

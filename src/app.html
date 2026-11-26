@@ -104,6 +104,9 @@
 				let pressed = false;
 				let finished = false;
 				let letGo;
+				// The installed app fires a same-size resize just after the exit starts, so only a change of
+				// size counts as a turn.
+				const { innerWidth: width, innerHeight: height } = window;
 				const skip = () => animations.forEach((a) => a.finish());
 				const close = () => finished && !pressed && end();
 				const release = () => {
@@ -134,7 +137,7 @@
 						release();
 					},
 					keydown: own,
-					resize: skip
+					resize: () => (innerWidth !== width || innerHeight !== height) && skip()
 				};
 				for (const [type, listener] of Object.entries(listeners)) {
 					addEventListener(type, listener, true);
