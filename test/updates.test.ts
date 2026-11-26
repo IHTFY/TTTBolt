@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+// @vitest-environment happy-dom
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { reloadOnUpdate } from '../src/lib/updates';
 
@@ -19,6 +20,8 @@ function setup({ controller = {} as unknown, idle = true } = {}) {
 		stop
 	};
 }
+
+afterEach(() => document.documentElement.classList.remove('launching'));
 
 describe('reloadOnUpdate', () => {
 	it('reloads at once when an update takes over and no game is in progress', () => {
@@ -58,6 +61,40 @@ describe('reloadOnUpdate', () => {
 		const { takeOver, reload, stop } = setup();
 		stop();
 		takeOver();
+		expect(reload).not.toHaveBeenCalled();
+	});
+
+	it('holds the reload while the launch exit plays, then reloads once it ends', async () => {
+		const root = document.documentElement;
+		root.classList.add('launching');
+		const { takeOver, reload } = setup();
+		takeOver();
+		await Promise.resolve();
+		expect(reload).not.toHaveBeenCalled();
+		root.classList.remove('launching');
+		await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+	});
+
+	it('still waits for an empty board after the launch ends', async () => {
+		const root = document.documentElement;
+		root.classList.add('launching');
+		const { takeOver, idleStore, reload } = setup({ idle: false });
+		takeOver();
+		root.classList.remove('launching');
+		await Promise.resolve();
+		expect(reload).not.toHaveBeenCalled();
+		idleStore.set(true);
+		expect(reload).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not reload after being stopped during the launch', async () => {
+		const root = document.documentElement;
+		root.classList.add('launching');
+		const { takeOver, reload, stop } = setup();
+		takeOver();
+		stop();
+		root.classList.remove('launching');
+		await new Promise((resolve) => setTimeout(resolve, 20));
 		expect(reload).not.toHaveBeenCalled();
 	});
 });

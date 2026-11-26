@@ -3,7 +3,8 @@ import type { Readable } from 'svelte/store';
 /**
  * Reloads the page once a new version of the app has taken over, but only while `idle` is true, so a
  * game in progress isn't dropped: an update that arrives mid-game waits until the board is empty
- * again. Returns a function that stops watching.
+ * again. It also waits for the installed app's launch exit (`html.launching`), which a reload would
+ * cut short. Returns a function that stops watching.
  */
 export function reloadOnUpdate(
 	sw: Pick<ServiceWorkerContainer, 'addEventListener' | 'removeEventListener' | 'controller'>,
@@ -15,8 +16,15 @@ export function reloadOnUpdate(
 	let updated = false;
 	let isIdle = false;
 
+	const root = document.documentElement;
+	const launch = new MutationObserver(() => reloadIfReady());
 	const reloadIfReady = () => {
 		if (!updated || !isIdle) return;
+		if (root.classList.contains('launching')) {
+			launch.observe(root, { attributeFilter: ['class'] });
+			return;
+		}
+		launch.disconnect();
 		updated = false;
 		reload();
 	};
@@ -35,6 +43,7 @@ export function reloadOnUpdate(
 	sw.addEventListener('controllerchange', onChange);
 	return () => {
 		stopIdle();
+		launch.disconnect();
 		sw.removeEventListener('controllerchange', onChange);
 	};
 }
