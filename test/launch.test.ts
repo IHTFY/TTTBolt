@@ -120,6 +120,16 @@ describe('launch screen', () => {
 		expect(move.finish).not.toHaveBeenCalled();
 	});
 
+	it('measures the size when the exit starts, not when the page loads', () => {
+		launch();
+		vi.stubGlobal('innerWidth', window.innerHeight);
+		vi.stubGlobal('innerHeight', window.innerWidth);
+		const move = animation();
+		window.launchExit!(() => [move] as unknown as Animation[]);
+		window.dispatchEvent(new Event('resize'));
+		expect(move.finish).not.toHaveBeenCalled();
+	});
+
 	it('shows the game if the page stops arriving before the game', () => {
 		launch();
 		copy()!.nextElementSibling!.remove();
