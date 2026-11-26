@@ -55,9 +55,6 @@
 					{ backgroundColor: ['#2e9fe0', 'rgb(46 159 224 / 0)'] },
 					{ duration: 600, easing: 'ease-in', fill: 'forwards' }
 				),
-				overlay
-					.querySelector('#launch-name')!
-					.animate({ opacity: [1, 0] }, { duration: 150, fill: 'forwards' }),
 				icon.animate(
 					{ transform: ['none', `translate(${dx}px, ${dy}px) scale(${scale})`] },
 					{ duration: 750, easing: 'cubic-bezier(0.5, 0, 0.2, 1)', fill: 'forwards' }
