@@ -9,7 +9,7 @@ const html = readFileSync(resolve(__dirname, '../src/app.html'), 'utf8');
 const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
 	.map((match) => match[1])
 	.find((code) => code.includes('launchExit'))!;
-const overlay = html.match(/<div id="launch"[\s\S]*?<\/span>\s*<\/div>/)![0];
+const overlay = html.match(/<div id="launch"[\s\S]*?<\/svg>\s*<\/div>/)![0];
 
 type Launch = { app?: boolean; navigation?: string; reducedMotion?: boolean };
 
